@@ -9,12 +9,12 @@ API_BASE = os.getenv("API_BASE", "http://api:8000")
 st.title("Setup Evaluator")
 
 default_context = {
-    "symbol": "NIFTY",
+    "symbol": "BANKNIFTY",
     "timeframe": "5m",
     "market_structure": "HH_HL",
     "price_above_ema200": True,
     "retracement_pct": 50.0,
-    "distance_from_ema_pct": 0.7,
+    "distance_from_ema_pct": 1.2,
     "higher_timeframe_bias": "bullish",
     "at_channel_or_envelope_extreme": False,
     "core_tools_aligned": True,
@@ -40,11 +40,16 @@ if st.button("Evaluate Setup"):
         else:
             payload = response.json()
             setup = payload["setup"]
+            profile = setup["market_context"].get("instrument_profile", {})
 
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
             c1.metric("Stance", setup["stance"])
             c2.metric("Long Score", setup["long_score"])
             c3.metric("Short Score", setup["short_score"])
+            c4.metric("Profile", profile.get("symbol", "DEFAULT"))
+
+            if profile:
+                st.info(profile.get("risk_note", ""))
 
             st.subheader("Reasons")
             for reason in setup["reasons"]:

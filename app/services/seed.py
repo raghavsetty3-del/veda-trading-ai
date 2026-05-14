@@ -17,13 +17,13 @@ DEFAULT_PRINCIPLES = [
 ]
 
 DEFAULT_RULES = [
-    ("AP-002", "RULE-AVOID-LOW-ADX", "Avoid low ADX/choppy market", {"conditions": [{"field": "adx", "op": "<", "value": 18}]}, "If ADX is below threshold, system should reduce or block trend-following trades."),
+    ("AP-002", "RULE-AVOID-LOW-ADX", "Avoid low ADX/choppy market", {"conditions": [{"field": "adx", "op": "<", "value": "$low_adx_threshold"}]}, "If ADX is below the instrument threshold, system should reduce or block trend-following trades."),
     ("AP-001", "RULE-LONG-EMA-BIAS", "Long only above 200 EMA bias", {"conditions": [{"field": "price_above_ema200", "op": "==", "value": True}]}, "Long signals should be preferred only when price is above 200 EMA."),
     ("AP-003", "RULE-RETRACEMENT-LRHR", "Prefer LRHR retracement zone", {"conditions": [{"field": "retracement_pct", "op": "<=", "value": 61.8}]}, "Pullback entries near 38.2/50/61.8 should be preferred over chase entries."),
     ("AP-006", "RULE-BULLISH-PRICE-ACTION", "Bullish structure requires HH/HL", {"conditions": [{"field": "market_structure", "op": "==", "value": "HH_HL"}]}, "Long bias should require bullish price action unless the setup is explicitly classified as reversal."),
     ("AP-006", "RULE-BEARISH-PRICE-ACTION", "Bearish structure requires LH/LL", {"conditions": [{"field": "market_structure", "op": "==", "value": "LH_LL"}]}, "Short bias should require bearish price action unless the setup is explicitly classified as reversal."),
     ("AP-007", "RULE-SHORT-EMA-BIAS", "Short only below 200 EMA bias", {"conditions": [{"field": "price_above_ema200", "op": "==", "value": False}]}, "Short signals should be preferred only when price is below 200 EMA."),
-    ("AP-003", "RULE-NO-CHASE-EXTENSION", "Avoid chasing extended price", {"conditions": [{"field": "distance_from_ema_pct", "op": "<=", "value": 1.5}]}, "If price is far away from the relevant EMA after expansion, wait for pullback or fresh structure."),
+    ("AP-003", "RULE-NO-CHASE-EXTENSION", "Avoid chasing extended price", {"conditions": [{"field": "distance_from_ema_pct", "op": "<=", "value": "$ema_extension_limit_pct"}]}, "If price is far away from the relevant EMA after expansion, wait for pullback or fresh structure."),
     ("AP-008", "RULE-MTF-CONTEXT-REQUIRED", "Require higher timeframe context", {"conditions": [{"field": "higher_timeframe_bias", "op": "!=", "value": "unknown"}]}, "Intraday setups should include higher timeframe bias before being classified high conviction."),
     ("AP-009", "RULE-PART-BOOK-AT-EXTREME", "Part book at extremes", {"conditions": [{"field": "at_channel_or_envelope_extreme", "op": "==", "value": True}]}, "When price reaches channel, envelope, or target extremes, the system should recommend partial profit booking."),
     ("AP-011", "RULE-EW-OPTIONAL-NOT-BLOCKING", "Elliott Wave is optional", {"conditions": [{"field": "core_tools_aligned", "op": "==", "value": True}]}, "A valid setup does not require Elliott Wave if price action, retracement, moving averages, and channels align."),
@@ -39,7 +39,15 @@ def seed_defaults(db: Session):
 
     for ap_code, rule_code, name, logic, expected in DEFAULT_RULES:
         ap = db.query(AuthorPrinciple).filter_by(code=ap_code).first()
-        if ap and not db.query(RuleMapping).filter_by(rule_code=rule_code).first():
+        if not ap:
+            continue
+        existing_rule = db.query(RuleMapping).filter_by(rule_code=rule_code).first()
+        if existing_rule:
+            existing_rule.logic_json = logic
+            existing_rule.expected_behavior = expected
+            existing_rule.rule_name = name
+            existing_rule.principle_id = ap.id
+        else:
             db.add(RuleMapping(principle_id=ap.id, rule_code=rule_code, rule_name=name, logic_json=logic, expected_behavior=expected, status="draft", version="0.2.0", active=True))
     db.commit()
 

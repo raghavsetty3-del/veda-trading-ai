@@ -6,6 +6,7 @@ from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, RuleMapping, SourceDocument, SystemState, ValidationCase
 from app.schemas import AuditEvent, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
+from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
 from app.services.psychology import extract_psychology
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.rules import evaluate_rule, evaluate_setup
@@ -52,6 +53,16 @@ def list_rules(db: Session = Depends(get_db)):
     return db.query(RuleMapping).order_by(RuleMapping.rule_code).all()
 
 
+@app.get("/instruments")
+def list_instruments():
+    return list(PROFILES.values())
+
+
+@app.get("/instruments/{symbol}")
+def get_instrument(symbol: str):
+    return get_instrument_profile(symbol)
+
+
 @app.post("/rules")
 def create_rule(payload: RuleMappingCreate, db: Session = Depends(get_db)):
     if db.query(RuleMapping).filter_by(rule_code=payload.rule_code).first():
@@ -64,10 +75,11 @@ def create_rule(payload: RuleMappingCreate, db: Session = Depends(get_db)):
 
 @app.post("/rules/evaluate")
 def evaluate_rules(payload: RuleEvaluationRequest, db: Session = Depends(get_db)):
+    market_context = apply_instrument_profile(payload.market_context)
     rows = db.query(RuleMapping).filter_by(active=True).order_by(RuleMapping.rule_code).all()
     results = []
     for row in rows:
-        evaluation = evaluate_rule(row.logic_json, payload.market_context)
+        evaluation = evaluate_rule(row.logic_json, market_context)
         results.append({
             "rule_code": row.rule_code,
             "rule_name": row.rule_name,
@@ -77,15 +89,16 @@ def evaluate_rules(payload: RuleEvaluationRequest, db: Session = Depends(get_db)
             "failed": evaluation["failed"],
             "expected_behavior": row.expected_behavior,
         })
-    return {"market_context": payload.market_context, "results": results}
+    return {"market_context": market_context, "results": results}
 
 
 @app.post("/strategy/evaluate-setup")
 def evaluate_strategy_setup(payload: SetupEvaluationRequest, db: Session = Depends(get_db)):
+    market_context = apply_instrument_profile(payload.market_context)
     rows = db.query(RuleMapping).filter_by(active=True).order_by(RuleMapping.rule_code).all()
     rule_results = []
     for row in rows:
-        evaluation = evaluate_rule(row.logic_json, payload.market_context)
+        evaluation = evaluate_rule(row.logic_json, market_context)
         rule_results.append({
             "rule_code": row.rule_code,
             "rule_name": row.rule_name,
@@ -95,7 +108,7 @@ def evaluate_strategy_setup(payload: SetupEvaluationRequest, db: Session = Depen
             "failed": evaluation["failed"],
             "expected_behavior": row.expected_behavior,
         })
-    setup = evaluate_setup(payload.market_context, rule_results)
+    setup = evaluate_setup(market_context, rule_results)
     audit(db, "strategy.evaluate_setup", f"Evaluated setup stance: {setup['stance']}", payload=setup)
     return {"setup": setup, "rules": rule_results}
 

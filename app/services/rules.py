@@ -7,6 +7,8 @@ def evaluate_rule(rule_logic: dict, market_context: dict) -> dict:
         actual = market_context.get(field)
         ok = False
         try:
+            if isinstance(value, str) and value.startswith("$"):
+                value = market_context.get(value[1:])
             if op == ">": ok = actual > value
             elif op == "<": ok = actual < value
             elif op == ">=": ok = actual >= value
