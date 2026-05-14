@@ -121,6 +121,24 @@ class MarketCandle(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class PaperTrade(Base):
+    __tablename__ = "paper_trades"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    symbol: Mapped[str] = mapped_column(String(50), index=True)
+    timeframe: Mapped[str] = mapped_column(String(20), default="5m")
+    side: Mapped[str] = mapped_column(String(20), index=True)
+    stance: Mapped[str] = mapped_column(String(50), index=True)
+    entry_price: Mapped[float] = mapped_column(Float)
+    stop_loss: Mapped[float | None] = mapped_column(Float, nullable=True)
+    target: Mapped[float | None] = mapped_column(Float, nullable=True)
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+    status: Mapped[str] = mapped_column(String(50), default="planned", index=True)
+    reason: Mapped[str] = mapped_column(Text)
+    context: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+
+
 class FailedJob(Base):
     __tablename__ = "failed_jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

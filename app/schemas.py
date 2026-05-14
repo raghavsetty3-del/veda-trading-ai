@@ -47,6 +47,18 @@ class MarketSnapshotRequest(BaseModel):
     limit: int = 50
 
 
+class PaperTradeRequest(BaseModel):
+    symbol: str
+    timeframe: str = "5m"
+    market_context: dict
+    quantity: int = 1
+    allow_when_kill_switch_on: bool = False
+
+
+class PaperTradeStatusUpdate(BaseModel):
+    status: str
+
+
 class SourceDocumentCreate(BaseModel):
     source_type: str
     source_url: str | None = None

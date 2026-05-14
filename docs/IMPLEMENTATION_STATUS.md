@@ -22,12 +22,13 @@ Date: 2026-05-14
 - Live trading remains disabled by default with kill switch controls.
 - Offsite PostgreSQL backup script and operating notes are present.
 - Market data candle storage and manual ingestion skeleton are present.
+- Paper-trading simulation endpoints and dashboard page are present.
 
 ## Pending
 
 - Push the latest local commits to GitHub from the laptop session that can enter the SSH key passphrase.
 - Connect market data skeleton to a real provider.
-- Add paper-trading execution loop before any live order path.
+- Expand paper-trading simulation into a scheduled execution loop.
 - Add scheduled blog ingestion and Telegram ingestion credentials.
 - Add OpenAI-assisted extraction for new source documents.
 - Add backtesting/replay module using historical NIFTY and BANKNIFTY data.

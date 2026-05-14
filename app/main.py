@@ -3,11 +3,12 @@ from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
-from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, MarketCandleCreate, MarketSnapshotRequest, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
+from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
+from app.schemas import AuditEvent, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle
+from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
 from app.services.psychology import extract_psychology
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.rules import evaluate_rule, evaluate_setup
@@ -166,6 +167,27 @@ def create_market_snapshot(payload: MarketSnapshotRequest, db: Session = Depends
     snapshot = market_snapshot(db, symbol=payload.symbol, timeframe=payload.timeframe, limit=payload.limit)
     audit(db, "market.snapshot", f"Created {snapshot['symbol']} market snapshot", payload={"symbol": snapshot["symbol"], "timeframe": snapshot["timeframe"], "candles": snapshot["candles"], "ready": snapshot["ready"]})
     return snapshot
+
+
+@app.get("/paper/trades")
+def paper_trades(limit: int = 100, db: Session = Depends(get_db)):
+    return list_paper_trades(db, limit=limit)
+
+
+@app.post("/paper/trades")
+def create_trade(payload: PaperTradeRequest, db: Session = Depends(get_db)):
+    result = create_paper_trade(db, payload)
+    audit(db, "paper.trade_create", "Evaluated paper trade request", payload={"created": result["created"], "blocked": result["blocked"], "symbol": result["market_context"]["symbol"], "stance": result["setup"]["stance"], "side": result["side"]})
+    return result
+
+
+@app.patch("/paper/trades/{trade_id}")
+def update_trade(trade_id: int, payload: PaperTradeStatusUpdate, db: Session = Depends(get_db)):
+    row = update_paper_trade_status(db, trade_id=trade_id, status=payload.status)
+    if not row:
+        raise HTTPException(status_code=404, detail="Paper trade not found")
+    audit(db, "paper.trade_update", f"Paper trade {trade_id} -> {row.status}", entity_type="paper_trade", entity_id=str(row.id))
+    return row
 
 
 @app.get("/sources")
