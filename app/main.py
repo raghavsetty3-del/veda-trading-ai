@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.backtesting import evaluate_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
@@ -13,6 +13,7 @@ from app.services.knowledge_extraction import process_pending_sources, process_s
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
 from app.services.recovery import get_kill_switch, set_kill_switch
+from app.services.rule_lifecycle import set_rule_activation
 from app.services.rules import evaluate_rule, evaluate_setup
 from app.services.scenarios import get_scenario, list_scenarios
 from app.services.seed import seed_defaults
@@ -79,6 +80,15 @@ def create_rule(payload: RuleMappingCreate, db: Session = Depends(get_db)):
     row = RuleMapping(**payload.model_dump())
     db.add(row); db.commit(); db.refresh(row)
     audit(db, "rule.create", f"Created rule {row.rule_code}", entity_type="rule", entity_id=str(row.id))
+    return row
+
+
+@app.patch("/rules/{rule_code}/activation")
+def update_rule_activation(rule_code: str, payload: RuleActivationRequest, db: Session = Depends(get_db)):
+    row = set_rule_activation(db, rule_code=rule_code, active=payload.active, validation_note=payload.validation_note)
+    if not row:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    audit(db, "rule.activation", f"Rule {rule_code} active={payload.active}", entity_type="rule", entity_id=str(row["id"]), payload={"active": payload.active, "validation_note": payload.validation_note})
     return row
 
 

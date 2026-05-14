@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 
 
@@ -19,6 +19,11 @@ class RuleMappingCreate(BaseModel):
     expected_behavior: str
     status: str = "draft"
     version: str = "0.1.0"
+
+
+class RuleActivationRequest(BaseModel):
+    active: bool
+    validation_note: str = Field(min_length=10)
 
 
 class RuleEvaluationRequest(BaseModel):
