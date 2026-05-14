@@ -17,6 +17,7 @@ from app.services.rules import evaluate_rule, evaluate_setup
 from app.services.scenarios import get_scenario, list_scenarios
 from app.services.seed import seed_defaults
 from app.services.source_archive import archive_source_document
+from app.services.suggestions import rule_suggestions
 from app.services.telegram_ingestion import ingest_telegram_export
 from app.ingestion.blog import fetch_blog_page
 from app.ingestion.telegram_listener import telegram_status
@@ -263,6 +264,12 @@ def extraction_process_source(source_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Source not found")
     audit(db, "extraction.process_source", f"Processed source {source_id}", entity_type="source_document", entity_id=str(source_id), payload={"insight_id": result["insight_id"]})
     return result
+
+
+@app.get("/suggestions/rules")
+def suggestions_rules(limit: int = 200, db: Session = Depends(get_db)):
+    suggestions = rule_suggestions(db, limit=limit)
+    return {"count": len(suggestions), "items": suggestions}
 
 
 @app.get("/validation")

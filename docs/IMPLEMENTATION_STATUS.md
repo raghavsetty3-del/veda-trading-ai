@@ -27,6 +27,7 @@ Date: 2026-05-14
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
 - Telegram export ingestion and credential readiness status are present.
 - Local deterministic knowledge extraction workbench is present.
+- Review-only rule suggestion generator is present.
 
 ## Pending
 
@@ -36,6 +37,7 @@ Date: 2026-05-14
 - Configure production blog RSS feeds and live Telegram listener credentials.
 - Add OpenAI-assisted extraction to enrich the local deterministic extractor.
 - Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
+- Add reviewed promotion flow from rule suggestion to draft rule.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Create a dedicated Azure Storage account/container and schedule automated off-VM PostgreSQL backups.
 
