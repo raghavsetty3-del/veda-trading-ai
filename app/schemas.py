@@ -24,6 +24,10 @@ class RuleEvaluationRequest(BaseModel):
     market_context: dict
 
 
+class SetupEvaluationRequest(BaseModel):
+    market_context: dict
+
+
 class SourceDocumentCreate(BaseModel):
     source_type: str
     source_url: str | None = None
