@@ -14,6 +14,7 @@ Date: 2026-05-14
 - Daily off-VM PostgreSQL backup upload is scheduled for `18:45 UTC` / `00:15 IST`.
 - Cron-compatible offsite backup script is verified with a successful upload.
 - Azure Blob lifecycle retention policy is present for 90-day PostgreSQL backup cleanup.
+- Non-destructive PostgreSQL restore drill script is present and verified.
 - Healthwatch auto-healer and systemd timer are present for the Docker Compose stack.
 - Crypto bot proxy is available at `/crypto/` behind the same Basic Auth boundary.
 - Healthwatch also keeps the crypto bot project healthy when `/home/traderadmin/ai-trading-system` exists.
@@ -50,7 +51,7 @@ Date: 2026-05-14
 - Configure OpenAI extraction credentials if AI enrichment should run in production.
 - Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
-- Add periodic restore drills.
+- Schedule periodic restore drills.
 - Add external uptime alerting beyond VM-local healthwatch.
 
 ## Current Access

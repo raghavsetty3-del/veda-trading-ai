@@ -81,3 +81,11 @@ Download the selected blob, then restore with:
 ```bash
 bash scripts/restore_postgres.sh /path/to/postgres.sql.gz
 ```
+
+For a non-destructive restore drill, restore into a temporary PostgreSQL container instead:
+
+```bash
+bash scripts/verify_postgres_backup.sh /path/to/postgres.sql.gz
+```
+
+The drill removes the temporary container after verification.
