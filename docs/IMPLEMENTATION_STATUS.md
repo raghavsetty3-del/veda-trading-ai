@@ -26,6 +26,7 @@ Date: 2026-05-14
 - Backtest/replay evaluator skeleton and dashboard page are present.
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
 - Telegram export ingestion and credential readiness status are present.
+- Local deterministic knowledge extraction workbench is present.
 
 ## Pending
 
@@ -33,7 +34,7 @@ Date: 2026-05-14
 - Connect market data skeleton to a real provider.
 - Expand paper-trading simulation into a scheduled execution loop.
 - Configure production blog RSS feeds and live Telegram listener credentials.
-- Add OpenAI-assisted extraction for new source documents.
+- Add OpenAI-assisted extraction to enrich the local deterministic extractor.
 - Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Create a dedicated Azure Storage account/container and schedule automated off-VM PostgreSQL backups.

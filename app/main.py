@@ -9,6 +9,7 @@ from app.services.audit import audit
 from app.services.backtesting import evaluate_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
+from app.services.knowledge_extraction import process_pending_sources, process_source
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
 from app.services.recovery import get_kill_switch, set_kill_switch
@@ -246,6 +247,22 @@ def ingest_telegram_export_request(payload: TelegramExportIngestRequest, db: Ses
 @app.get("/insights")
 def list_insights(limit: int = 100, db: Session = Depends(get_db)):
     return db.query(ExtractedInsight).order_by(ExtractedInsight.created_at.desc()).limit(limit).all()
+
+
+@app.post("/extraction/process-pending")
+def extraction_process_pending(limit: int = 50, db: Session = Depends(get_db)):
+    result = process_pending_sources(db, limit=limit)
+    audit(db, "extraction.process_pending", "Processed pending source documents", payload={"processed": result["processed"], "seen": result["seen"]})
+    return result
+
+
+@app.post("/extraction/sources/{source_id}")
+def extraction_process_source(source_id: int, db: Session = Depends(get_db)):
+    result = process_source(db, source_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Source not found")
+    audit(db, "extraction.process_source", f"Processed source {source_id}", entity_type="source_document", entity_id=str(source_id), payload={"insight_id": result["insight_id"]})
+    return result
 
 
 @app.get("/validation")
