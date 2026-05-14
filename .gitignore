@@ -8,3 +8,4 @@ backups/
 *.sqlite
 telegram_sessions/
 .DS_Store
+nginx/.htpasswd
