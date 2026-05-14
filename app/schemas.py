@@ -83,6 +83,16 @@ class PaperSchedulerRunRequest(BaseModel):
     quantity: int | None = None
 
 
+class PaperTradeValidationRequest(BaseModel):
+    symbol: str | None = None
+    timeframe: str | None = None
+    status: str | None = None
+    rule_code: str | None = None
+    limit: int = 100
+    expected_min_trades: int = 1
+    notes: str | None = None
+
+
 class BacktestStep(BaseModel):
     label: str | None = None
     market_context: dict

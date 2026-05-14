@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
@@ -14,6 +14,7 @@ from app.services.market_data import latest_candles, market_snapshot, upsert_can
 from app.services.market_provider import ingest_configured_market_sources, ingest_market_source, market_provider_status
 from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
+from app.services.paper_validation import create_paper_trade_validation
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.rule_evidence import build_rule_activation_evidence
 from app.services.rule_lifecycle import set_rule_activation
@@ -397,6 +398,13 @@ def create_validation_case(payload: ValidationCaseCreate, db: Session = Depends(
 def create_validation_from_candle_replay(payload: CandleReplayValidationRequest, db: Session = Depends(get_db)):
     result = create_candle_replay_validation(db, payload)
     audit(db, "validation.candle_replay", f"Created candle replay validation {result['case_code']}", entity_type="validation_case", entity_id=str(result["validation_case_id"]), payload=result)
+    return result
+
+
+@app.post("/validation/from-paper-trades")
+def create_validation_from_paper_trades(payload: PaperTradeValidationRequest, db: Session = Depends(get_db)):
+    result = create_paper_trade_validation(db, payload)
+    audit(db, "validation.paper_trades", f"Created paper trade validation {result['case_code']}", entity_type="validation_case", entity_id=str(result["validation_case_id"]), payload=result)
     return result
 
 

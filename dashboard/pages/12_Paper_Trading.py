@@ -88,6 +88,27 @@ if scheduler:
         if result:
             st.json(result)
 
+st.subheader("Save Paper Evidence")
+validation_rule_code = st.text_input("Evidence Rule Code", value="")
+validation_status = st.selectbox("Evidence Status Filter", ["", "planned", "open", "closed", "cancelled"], index=0)
+validation_limit = st.number_input("Evidence Trade Limit", min_value=1, max_value=500, value=100, step=10)
+expected_min_trades = st.number_input("Expected Min Evidence Trades", min_value=1, max_value=500, value=1, step=1)
+if st.button("Save Paper Trades as Validation"):
+    result = post(
+        "/validation/from-paper-trades",
+        {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "status": validation_status or None,
+            "rule_code": validation_rule_code or None,
+            "limit": validation_limit,
+            "expected_min_trades": expected_min_trades,
+            "notes": "Saved from Paper Trading dashboard.",
+        },
+    )
+    if result:
+        st.json(result)
+
 st.subheader("Recent Paper Trades")
 trades = get("/paper/trades", {"limit": 100}) or []
 if trades:
