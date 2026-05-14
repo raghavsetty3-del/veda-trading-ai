@@ -9,4 +9,4 @@ Recommended next build:
 6. Configure production blog RSS feeds and live Telegram listener credentials.
 7. Add live Telegram Telethon listener.
 8. Add OpenAI-assisted extraction to enrich deterministic source extraction.
-9. Add reviewed promotion flow from rule suggestion to draft rule.
+9. Add activation workflow for reviewed draft rules after backtest/paper-trade validation.

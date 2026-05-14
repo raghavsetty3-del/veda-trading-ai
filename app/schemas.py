@@ -71,6 +71,10 @@ class BacktestRequest(BaseModel):
     steps: list[BacktestStep]
 
 
+class RuleSuggestionPromotionRequest(BaseModel):
+    review_note: str | None = None
+
+
 class SourceDocumentCreate(BaseModel):
     source_type: str
     source_url: str | None = None

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.backtesting import evaluate_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
@@ -17,7 +17,7 @@ from app.services.rules import evaluate_rule, evaluate_setup
 from app.services.scenarios import get_scenario, list_scenarios
 from app.services.seed import seed_defaults
 from app.services.source_archive import archive_source_document
-from app.services.suggestions import rule_suggestions
+from app.services.suggestions import promote_rule_suggestion, rule_suggestions
 from app.services.telegram_ingestion import ingest_telegram_export
 from app.ingestion.blog import fetch_blog_page
 from app.ingestion.telegram_listener import telegram_status
@@ -270,6 +270,16 @@ def extraction_process_source(source_id: int, db: Session = Depends(get_db)):
 def suggestions_rules(limit: int = 200, db: Session = Depends(get_db)):
     suggestions = rule_suggestions(db, limit=limit)
     return {"count": len(suggestions), "items": suggestions}
+
+
+@app.post("/suggestions/rules/{rule_code}/promote")
+def suggestions_promote_rule(rule_code: str, payload: RuleSuggestionPromotionRequest, db: Session = Depends(get_db)):
+    result = promote_rule_suggestion(db, rule_code=rule_code, review_note=payload.review_note)
+    if not result:
+        raise HTTPException(status_code=404, detail="Rule suggestion not found")
+    rule = result["rule"]
+    audit(db, "suggestion.rule_promote", f"Promoted suggestion {rule_code} to {rule['rule_code']}", entity_type="rule", entity_id=str(rule["id"]), payload={"promoted": result["promoted"], "principle_id": result["principle"]["id"], "active": rule["active"]})
+    return result
 
 
 @app.get("/validation")

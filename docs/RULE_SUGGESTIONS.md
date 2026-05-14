@@ -26,3 +26,19 @@ Each suggestion includes:
 - Source insight IDs
 
 Promoting a suggestion into a live rule should remain a manual reviewed step until paper trading and backtesting are stronger.
+
+## Promotion
+
+Promoting a suggestion creates:
+
+- A review-derived `AuthorPrinciple`
+- A `RuleMapping` with `status=draft`
+- `active=false`, so the rule does not affect live evaluation until explicitly reviewed and activated later
+
+API:
+
+```bash
+curl -X POST "http://localhost:8000/suggestions/rules/SUGGEST-RETRACEMENT-LRHR/promote" \
+  -H "Content-Type: application/json" \
+  -d '{"review_note":"Approved for draft review."}'
+```
