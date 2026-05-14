@@ -29,6 +29,12 @@ to:
 /home/traderadmin/veda-trading-ai/nginx/.htpasswd
 ```
 
+Set the file readable by the Nginx container:
+
+```bash
+chmod 644 /home/traderadmin/veda-trading-ai/nginx/.htpasswd
+```
+
 Restart Nginx:
 
 ```bash
