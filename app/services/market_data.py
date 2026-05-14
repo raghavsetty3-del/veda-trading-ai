@@ -53,6 +53,32 @@ def _derive_rule_context(candles: list[MarketCandle]) -> dict:
     }
 
 
+def candle_market_context(symbol: str, timeframe: str, candles: list[MarketCandle]) -> dict:
+    closes = [item.close for item in candles]
+    latest = candles[-1]
+    previous = candles[-2] if len(candles) > 1 else None
+    recent_high = max(item.high for item in candles[-20:])
+    recent_low = min(item.low for item in candles[-20:])
+    momentum = "flat"
+    if previous and latest.close > previous.close:
+        momentum = "up"
+    elif previous and latest.close < previous.close:
+        momentum = "down"
+
+    return apply_instrument_profile({
+        "symbol": symbol.upper(),
+        "timeframe": timeframe.lower(),
+        "last_price": latest.close,
+        "recent_high": recent_high,
+        "recent_low": recent_low,
+        "momentum": momentum,
+        "close_change": latest.close - closes[0],
+        "source": latest.source,
+        "last_candle_at": latest.ts.isoformat(),
+        **_derive_rule_context(candles),
+    })
+
+
 def upsert_candle(db: Session, payload) -> MarketCandle:
     symbol = payload.symbol.upper()
     timeframe = payload.timeframe.lower()
@@ -73,6 +99,46 @@ def upsert_candle(db: Session, payload) -> MarketCandle:
     db.commit()
     db.refresh(row)
     return row
+
+
+def upsert_candles(db: Session, candles: list) -> dict:
+    if len(candles) > 5000:
+        raise ValueError("Bulk candle import is limited to 5000 rows per request")
+
+    created = 0
+    updated = 0
+    symbols: set[str] = set()
+    timeframes: set[str] = set()
+
+    for payload in candles:
+        symbol = payload.symbol.upper()
+        timeframe = payload.timeframe.lower()
+        row = (
+            db.query(MarketCandle)
+            .filter_by(symbol=symbol, timeframe=timeframe, ts=payload.ts)
+            .first()
+        )
+        values = payload.model_dump()
+        values["symbol"] = symbol
+        values["timeframe"] = timeframe
+        symbols.add(symbol)
+        timeframes.add(timeframe)
+        if row:
+            for key, value in values.items():
+                setattr(row, key, value)
+            updated += 1
+        else:
+            db.add(MarketCandle(**values))
+            created += 1
+
+    db.commit()
+    return {
+        "received": len(candles),
+        "created": created,
+        "updated": updated,
+        "symbols": sorted(symbols),
+        "timeframes": sorted(timeframes),
+    }
 
 
 def latest_candles(db: Session, symbol: str, timeframe: str = "5m", limit: int = 50) -> list[MarketCandle]:
@@ -98,29 +164,8 @@ def market_snapshot(db: Session, symbol: str, timeframe: str = "5m", limit: int 
             "reason": "No candles available",
         }
 
-    closes = [item.close for item in candles]
     latest = candles[-1]
-    previous = candles[-2] if len(candles) > 1 else None
-    recent_high = max(item.high for item in candles[-20:])
-    recent_low = min(item.low for item in candles[-20:])
-    momentum = "flat"
-    if previous and latest.close > previous.close:
-        momentum = "up"
-    elif previous and latest.close < previous.close:
-        momentum = "down"
-
-    market_context = apply_instrument_profile({
-        "symbol": symbol.upper(),
-        "timeframe": timeframe.lower(),
-        "last_price": latest.close,
-        "recent_high": recent_high,
-        "recent_low": recent_low,
-        "momentum": momentum,
-        "close_change": latest.close - closes[0],
-        "source": latest.source,
-        "last_candle_at": latest.ts.isoformat(),
-        **_derive_rule_context(candles),
-    })
+    market_context = candle_market_context(symbol, timeframe, candles)
     return {
         "symbol": market_context["symbol"],
         "timeframe": timeframe.lower(),

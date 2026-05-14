@@ -6,7 +6,7 @@ Recommended next build:
 3. Connect market data skeleton to a real provider.
 4. Feed scheduled paper-trading with provider candles and promote qualified results into validation evidence.
 5. Add external uptime alerting beyond VM-local healthwatch.
-6. Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
+6. Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
 7. Configure production blog RSS feeds and live Telegram listener credentials.
 8. Add live Telegram Telethon listener.
 9. Add OpenAI-assisted extraction to enrich deterministic source extraction.

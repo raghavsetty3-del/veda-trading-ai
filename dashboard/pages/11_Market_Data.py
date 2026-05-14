@@ -77,3 +77,32 @@ if submitted:
     if result:
         st.success("Candle saved.")
         st.json(result)
+
+st.subheader("CSV Candle Import")
+csv_source = st.text_input("CSV Source", value="csv-upload")
+uploaded = st.file_uploader("CSV file", type=["csv"])
+if uploaded is not None:
+    df = pd.read_csv(uploaded)
+    st.dataframe(df.head(20), use_container_width=True)
+    required = {"ts", "open", "high", "low", "close"}
+    missing = required - set(df.columns)
+    if missing:
+        st.error(f"Missing columns: {', '.join(sorted(missing))}")
+    elif st.button("Import CSV Candles"):
+        rows = []
+        for _, row in df.iterrows():
+            rows.append({
+                "symbol": str(row.get("symbol", symbol)).upper(),
+                "timeframe": str(row.get("timeframe", timeframe)).lower(),
+                "ts": pd.to_datetime(row["ts"]).isoformat(),
+                "open": float(row["open"]),
+                "high": float(row["high"]),
+                "low": float(row["low"]),
+                "close": float(row["close"]),
+                "volume": None if pd.isna(row.get("volume")) else float(row.get("volume", 0)),
+                "source": str(row.get("source", csv_source)),
+            })
+        result = post("/market/candles/bulk", {"candles": rows})
+        if result:
+            st.success("CSV candles imported.")
+            st.json(result)

@@ -25,9 +25,10 @@ Date: 2026-05-14
 - Live trading remains disabled by default with kill switch controls.
 - Offsite PostgreSQL backup script and operating notes are present.
 - Market data candle storage and manual ingestion skeleton are present.
+- Bulk CSV candle import is present.
 - Paper-trading simulation endpoints and dashboard page are present.
 - Scheduled paper-trading evaluation is present and skips duplicate latest candles.
-- Backtest/replay evaluator skeleton and dashboard page are present.
+- Backtest/replay evaluator and stored-candle replay are present.
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
 - Telegram export ingestion and credential readiness status are present.
 - Local deterministic knowledge extraction workbench is present.
@@ -42,7 +43,7 @@ Date: 2026-05-14
 - Connect market data skeleton to a real provider.
 - Configure production blog RSS feeds and live Telegram listener credentials.
 - Add OpenAI-assisted extraction to enrich the local deterministic extractor.
-- Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
+- Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Add backup retention monitoring and periodic restore drills.
 - Add external uptime alerting beyond VM-local healthwatch.

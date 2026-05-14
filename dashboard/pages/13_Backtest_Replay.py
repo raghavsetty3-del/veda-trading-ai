@@ -80,3 +80,33 @@ if st.button("Run Replay"):
                 for item in result["results"]
             ]
             st.dataframe(pd.DataFrame(rows), use_container_width=True)
+
+st.subheader("Replay Stored Candles")
+limit = st.number_input("Candle Limit", min_value=20, max_value=500, value=200, step=10)
+min_window = st.number_input("Minimum Window", min_value=2, max_value=200, value=20, step=1)
+if st.button("Run Stored Candle Replay"):
+    result = post(
+        "/backtests/candles",
+        {
+            "name": "stored-candle-replay",
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "limit": limit,
+            "min_window": min_window,
+        },
+    )
+    if result:
+        st.json({"ready": result["ready"], "counts": result["counts"], "steps": result["steps"], "reason": result.get("reason")})
+        if result["results"]:
+            rows = [
+                {
+                    "index": item["index"],
+                    "label": item["label"],
+                    "stance": item["setup"]["stance"],
+                    "long_score": item["setup"]["long_score"],
+                    "short_score": item["setup"]["short_score"],
+                    "risk_flags": len(item["setup"]["risk_flags"]),
+                }
+                for item in result["results"]
+            ]
+            st.dataframe(pd.DataFrame(rows), use_container_width=True)

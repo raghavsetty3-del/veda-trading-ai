@@ -46,6 +46,10 @@ class MarketCandleCreate(BaseModel):
     source: str = "manual"
 
 
+class MarketCandleBulkCreate(BaseModel):
+    candles: list[MarketCandleCreate]
+
+
 class MarketSnapshotRequest(BaseModel):
     symbol: str
     timeframe: str = "5m"
@@ -81,6 +85,14 @@ class BacktestRequest(BaseModel):
     symbol: str
     timeframe: str = "5m"
     steps: list[BacktestStep]
+
+
+class CandleBacktestRequest(BaseModel):
+    name: str = "stored-candle-replay"
+    symbol: str
+    timeframe: str = "5m"
+    limit: int = 200
+    min_window: int = 20
 
 
 class RuleSuggestionPromotionRequest(BaseModel):

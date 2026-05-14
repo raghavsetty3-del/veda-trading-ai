@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models import RuleMapping
 from app.services.instrument_profiles import apply_instrument_profile
+from app.services.market_data import candle_market_context, latest_candles
 from app.services.rules import evaluate_rule, evaluate_setup
 
 
@@ -43,3 +44,42 @@ def evaluate_backtest(db: Session, payload) -> dict:
         "counts": counts,
         "results": results,
     }
+
+
+def evaluate_candle_backtest(db: Session, payload) -> dict:
+    candles = list(reversed(latest_candles(db, payload.symbol, payload.timeframe, payload.limit)))
+    min_window = max(2, payload.min_window)
+    if len(candles) < min_window:
+        return {
+            "name": payload.name,
+            "symbol": payload.symbol.upper(),
+            "timeframe": payload.timeframe,
+            "steps": 0,
+            "counts": {},
+            "results": [],
+            "ready": False,
+            "reason": f"Need at least {min_window} candles; found {len(candles)}",
+        }
+
+    class Step:
+        def __init__(self, label: str, market_context: dict):
+            self.label = label
+            self.market_context = market_context
+
+    steps = []
+    for index in range(min_window, len(candles) + 1):
+        window = candles[:index]
+        latest = window[-1]
+        steps.append(Step(latest.ts.isoformat(), candle_market_context(payload.symbol, payload.timeframe, window)))
+
+    replay_payload = type("ReplayPayload", (), {
+        "name": payload.name,
+        "symbol": payload.symbol,
+        "timeframe": payload.timeframe,
+        "steps": steps,
+    })()
+    result = evaluate_backtest(db, replay_payload)
+    result["ready"] = True
+    result["source_candles"] = len(candles)
+    result["min_window"] = min_window
+    return result

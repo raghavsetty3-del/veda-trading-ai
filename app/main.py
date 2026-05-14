@@ -4,13 +4,13 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
-from app.services.backtesting import evaluate_backtest
+from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
 from app.services.knowledge_extraction import process_pending_sources, process_source
-from app.services.market_data import latest_candles, market_snapshot, upsert_candle
+from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
 from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
 from app.services.recovery import get_kill_switch, set_kill_switch
@@ -204,6 +204,16 @@ def create_market_candle(payload: MarketCandleCreate, db: Session = Depends(get_
     return row
 
 
+@app.post("/market/candles/bulk")
+def create_market_candles_bulk(payload: MarketCandleBulkCreate, db: Session = Depends(get_db)):
+    try:
+        result = upsert_candles(db, payload.candles)
+    except ValueError as exc:
+        raise HTTPException(status_code=413, detail=str(exc)) from exc
+    audit(db, "market.candle_bulk_upsert", "Bulk upserted market candles", payload=result)
+    return result
+
+
 @app.post("/market/snapshot")
 def create_market_snapshot(payload: MarketSnapshotRequest, db: Session = Depends(get_db)):
     snapshot = market_snapshot(db, symbol=payload.symbol, timeframe=payload.timeframe, limit=payload.limit)
@@ -253,6 +263,13 @@ def run_paper_scheduler(payload: PaperSchedulerRunRequest | None = None, db: Ses
 def evaluate_backtest_request(payload: BacktestRequest, db: Session = Depends(get_db)):
     result = evaluate_backtest(db, payload)
     audit(db, "backtest.evaluate", f"Evaluated backtest {result['name']}", payload={"symbol": result["symbol"], "timeframe": result["timeframe"], "steps": result["steps"], "counts": result["counts"]})
+    return result
+
+
+@app.post("/backtests/candles")
+def evaluate_candle_backtest_request(payload: CandleBacktestRequest, db: Session = Depends(get_db)):
+    result = evaluate_candle_backtest(db, payload)
+    audit(db, "backtest.candle_replay", f"Evaluated candle replay {result['name']}", payload={"symbol": result["symbol"], "timeframe": result["timeframe"], "steps": result["steps"], "ready": result["ready"], "counts": result["counts"]})
     return result
 
 
