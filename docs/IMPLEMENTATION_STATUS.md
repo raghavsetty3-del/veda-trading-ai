@@ -23,6 +23,7 @@ Date: 2026-05-14
 - Offsite PostgreSQL backup script and operating notes are present.
 - Market data candle storage and manual ingestion skeleton are present.
 - Paper-trading simulation endpoints and dashboard page are present.
+- Backtest/replay evaluator skeleton and dashboard page are present.
 
 ## Pending
 
@@ -31,7 +32,7 @@ Date: 2026-05-14
 - Expand paper-trading simulation into a scheduled execution loop.
 - Add scheduled blog ingestion and Telegram ingestion credentials.
 - Add OpenAI-assisted extraction for new source documents.
-- Add backtesting/replay module using historical NIFTY and BANKNIFTY data.
+- Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Create a dedicated Azure Storage account/container and schedule automated off-VM PostgreSQL backups.
 

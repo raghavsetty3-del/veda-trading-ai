@@ -59,6 +59,18 @@ class PaperTradeStatusUpdate(BaseModel):
     status: str
 
 
+class BacktestStep(BaseModel):
+    label: str | None = None
+    market_context: dict
+
+
+class BacktestRequest(BaseModel):
+    name: str = "manual-backtest"
+    symbol: str
+    timeframe: str = "5m"
+    steps: list[BacktestStep]
+
+
 class SourceDocumentCreate(BaseModel):
     source_type: str
     source_url: str | None = None

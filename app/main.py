@@ -4,8 +4,9 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
+from app.services.backtesting import evaluate_backtest
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
@@ -188,6 +189,13 @@ def update_trade(trade_id: int, payload: PaperTradeStatusUpdate, db: Session = D
         raise HTTPException(status_code=404, detail="Paper trade not found")
     audit(db, "paper.trade_update", f"Paper trade {trade_id} -> {row.status}", entity_type="paper_trade", entity_id=str(row.id))
     return row
+
+
+@app.post("/backtests/evaluate")
+def evaluate_backtest_request(payload: BacktestRequest, db: Session = Depends(get_db)):
+    result = evaluate_backtest(db, payload)
+    audit(db, "backtest.evaluate", f"Evaluated backtest {result['name']}", payload={"symbol": result["symbol"], "timeframe": result["timeframe"], "steps": result["steps"], "counts": result["counts"]})
+    return result
 
 
 @app.get("/sources")
