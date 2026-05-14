@@ -35,6 +35,7 @@ Date: 2026-05-14
 - Paper-trading simulation endpoints and dashboard page are present.
 - Scheduled paper-trading evaluation is present and skips duplicate latest candles.
 - Backtest/replay evaluator and stored-candle replay are present.
+- Stored-candle replay can now create validation evidence cases.
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
 - Telegram export ingestion and credential readiness status are present.
 - Local deterministic knowledge extraction workbench is present.

@@ -84,6 +84,8 @@ if st.button("Run Replay"):
 st.subheader("Replay Stored Candles")
 limit = st.number_input("Candle Limit", min_value=20, max_value=500, value=200, step=10)
 min_window = st.number_input("Minimum Window", min_value=2, max_value=200, value=20, step=1)
+rule_code = st.text_input("Validation Rule Code", value="")
+expected_min_matches = st.number_input("Expected Min Rule Matches", min_value=0, max_value=500, value=1, step=1)
 if st.button("Run Stored Candle Replay"):
     result = post(
         "/backtests/candles",
@@ -110,3 +112,18 @@ if st.button("Run Stored Candle Replay"):
                 for item in result["results"]
             ]
             st.dataframe(pd.DataFrame(rows), use_container_width=True)
+
+if st.button("Save Stored Candle Replay as Validation"):
+    payload = {
+        "name": "stored-candle-validation",
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "limit": limit,
+        "min_window": min_window,
+        "rule_code": rule_code or None,
+        "expected_min_matches": expected_min_matches,
+        "notes": "Saved from Backtest Replay dashboard.",
+    }
+    result = post("/validation/from-candle-replay", payload)
+    if result:
+        st.json(result)

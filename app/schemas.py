@@ -103,6 +103,12 @@ class CandleBacktestRequest(BaseModel):
     min_window: int = 20
 
 
+class CandleReplayValidationRequest(CandleBacktestRequest):
+    rule_code: str | None = None
+    expected_min_matches: int = 1
+    notes: str | None = None
+
+
 class RuleSuggestionPromotionRequest(BaseModel):
     review_note: str | None = None
 
