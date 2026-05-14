@@ -16,6 +16,7 @@ Date: 2026-05-14
 - Azure Blob lifecycle retention policy is present for 90-day PostgreSQL backup cleanup.
 - Non-destructive PostgreSQL restore drill script is present and verified.
 - Healthwatch auto-healer and systemd timer are present for the Docker Compose stack.
+- Healthwatch supports optional external webhook alerts through `.healthwatch.env`.
 - Crypto bot proxy is available at `/crypto/` behind the same Basic Auth boundary.
 - Healthwatch also keeps the crypto bot project healthy when `/home/traderadmin/ai-trading-system` exists.
 - ChatGPT project context was extracted from the accessible `Veda trading system` project.
@@ -55,7 +56,7 @@ Date: 2026-05-14
 - Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Schedule periodic restore drills.
-- Add external uptime alerting beyond VM-local healthwatch.
+- Configure an external webhook receiver for healthwatch alerts if desired.
 
 ## Current Access
 

@@ -10,6 +10,8 @@ GATEWAY_URL="${GATEWAY_URL:-http://localhost/}"
 CRYPTO_PROJECT_DIR="${CRYPTO_PROJECT_DIR:-/home/traderadmin/ai-trading-system}"
 CRYPTO_HEALTH_URL="${CRYPTO_HEALTH_URL:-http://localhost:8101/api/status}"
 HEAL_WAIT_SECONDS="${HEAL_WAIT_SECONDS:-20}"
+HEALTHWATCH_WEBHOOK_URL="${HEALTHWATCH_WEBHOOK_URL:-}"
+HEALTHWATCH_WEBHOOK_NAME="${HEALTHWATCH_WEBHOOK_NAME:-veda-healthwatch}"
 
 services=(postgres redis chroma api worker scheduler dashboard nginx)
 
@@ -24,6 +26,14 @@ log() {
   printf '%s %s\n' "$(date -Is)" "$*" | tee -a "$LOG_FILE" >/dev/null
 }
 
+json_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  printf '%s' "$value"
+}
+
 post_audit() {
   local severity="$1"
   local message="$2"
@@ -31,6 +41,35 @@ post_audit() {
     -H "Content-Type: application/json" \
     -d "{\"event_type\":\"ops.healthwatch\",\"severity\":\"$severity\",\"message\":\"$message\",\"payload\":{\"host\":\"$(hostname)\",\"project_dir\":\"$PROJECT_DIR\",\"time\":\"$(date -Is)\"}}" \
     >/dev/null 2>&1 || true
+}
+
+post_external_alert() {
+  local severity="$1"
+  local message="$2"
+
+  if [[ -z "$HEALTHWATCH_WEBHOOK_URL" ]]; then
+    return 0
+  fi
+
+  local escaped_name escaped_message escaped_host escaped_project
+  escaped_name="$(json_escape "$HEALTHWATCH_WEBHOOK_NAME")"
+  escaped_message="$(json_escape "$message")"
+  escaped_host="$(json_escape "$(hostname)")"
+  escaped_project="$(json_escape "$PROJECT_DIR")"
+
+  if ! curl -fsS -X POST "$HEALTHWATCH_WEBHOOK_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"source\":\"$escaped_name\",\"severity\":\"$severity\",\"message\":\"$escaped_message\",\"host\":\"$escaped_host\",\"project_dir\":\"$escaped_project\",\"time\":\"$(date -Is)\"}" \
+    >/dev/null 2>&1; then
+    log "external_alert_failed severity=$severity"
+  fi
+}
+
+notify() {
+  local severity="$1"
+  local message="$2"
+  post_audit "$severity" "$message"
+  post_external_alert "$severity" "$message"
 }
 
 container_issue() {
@@ -93,7 +132,7 @@ heal_stack() {
   local reason="$1"
 
   log "healing_started reason=$reason"
-  post_audit "WARNING" "Healthwatch detected an unhealthy stack and started auto-heal."
+  notify "WARNING" "Healthwatch detected an unhealthy stack and started auto-heal: $reason"
 
   if docker ps --format '{{.Names}}' | grep -qx 'ai-trading-bot'; then
     legacy_ports="$(docker port ai-trading-bot 8000/tcp 2>/dev/null || true)"
@@ -120,10 +159,10 @@ heal_stack() {
   collect_issues
   if ((${#issues[@]} == 0)); then
     log "healing_completed status=healthy"
-    post_audit "INFO" "Healthwatch auto-heal completed and stack is healthy."
+    notify "INFO" "Healthwatch auto-heal completed and stack is healthy."
   else
     log "healing_incomplete remaining=${issues[*]}"
-    post_audit "ERROR" "Healthwatch auto-heal completed with remaining issues."
+    notify "ERROR" "Healthwatch auto-heal completed with remaining issues: ${issues[*]}"
     return 1
   fi
 }
@@ -131,6 +170,7 @@ heal_stack() {
 main() {
   if [[ ! -d "$PROJECT_DIR" ]]; then
     log "project_dir_missing path=$PROJECT_DIR"
+    post_external_alert "ERROR" "Healthwatch project directory is missing: $PROJECT_DIR"
     return 1
   fi
 

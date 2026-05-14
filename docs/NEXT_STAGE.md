@@ -5,7 +5,7 @@ Recommended next build:
 2. Verify scheduled off-VM PostgreSQL backup uploads and retention.
 3. Configure real market-data provider CSV/HTTP sources or broker credentials.
 4. Expand paper-trade validation from observation counts into P&L and exit-quality metrics.
-5. Add external uptime alerting beyond VM-local healthwatch.
+5. Configure a real external webhook receiver for healthwatch alerts.
 6. Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
 7. Configure production blog RSS feeds and live Telegram listener credentials.
 8. Add live Telegram Telethon listener.

@@ -19,7 +19,17 @@ Logs are written to:
 /home/traderadmin/veda-trading-ai/logs/healthwatch.log
 ```
 
-Healthwatch also writes audit events to the API when auto-heal starts, succeeds, or leaves remaining issues.
+Healthwatch also writes audit events to the API when auto-heal starts, succeeds, or leaves remaining issues. To send the same events to an external uptime or notification service, create this file on the VM:
+
+```bash
+cat >/home/traderadmin/veda-trading-ai/.healthwatch.env <<'ENV'
+HEALTHWATCH_WEBHOOK_URL=https://example.com/your-webhook
+HEALTHWATCH_WEBHOOK_NAME=veda-healthwatch
+ENV
+chmod 600 /home/traderadmin/veda-trading-ai/.healthwatch.env
+sudo systemctl daemon-reload
+sudo systemctl restart veda-healthwatch.timer
+```
 
 If `/home/traderadmin/ai-trading-system` exists, healthwatch also verifies the crypto bot container and its local status endpoint:
 
@@ -27,7 +37,7 @@ If `/home/traderadmin/ai-trading-system` exists, healthwatch also verifies the c
 http://localhost:8101/api/status
 ```
 
-During healing, it restarts that project with `docker compose up -d --remove-orphans`. It only stops the legacy `ai-trading-bot` container when it is occupying host port `8000`, so the current bot can keep running on port `8001`.
+During healing, it restarts that project with `docker compose up -d --remove-orphans`. It only stops the legacy `ai-trading-bot` container when it is occupying host port `8000`, so the current bot can keep running on port `8101`.
 
 ## Crypto Proxy
 

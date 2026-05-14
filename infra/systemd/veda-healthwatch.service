@@ -7,7 +7,7 @@ After=docker.service network-online.target
 Type=oneshot
 WorkingDirectory=/home/traderadmin/veda-trading-ai
 Environment=PROJECT_DIR=/home/traderadmin/veda-trading-ai
+EnvironmentFile=-/home/traderadmin/veda-trading-ai/.healthwatch.env
 ExecStart=/home/traderadmin/veda-trading-ai/scripts/healthwatch.sh
 User=traderadmin
 Group=traderadmin
-
