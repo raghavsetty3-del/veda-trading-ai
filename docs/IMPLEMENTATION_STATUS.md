@@ -35,6 +35,7 @@ Date: 2026-05-14
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
 - Telegram export ingestion and credential readiness status are present.
 - Local deterministic knowledge extraction workbench is present.
+- Optional OpenAI-assisted extraction is present and remains disabled until credentials are configured.
 - Review-only rule suggestion generator is present.
 - Reviewed suggestion promotion to inactive draft rules is present.
 - Draft rule activation/deactivation workflow with validation notes is present.
@@ -45,7 +46,7 @@ Date: 2026-05-14
 - Push the latest local commits to GitHub from the laptop session that can enter the SSH key passphrase.
 - Connect market data skeleton to a real provider.
 - Configure production blog RSS feeds and live Telegram listener credentials.
-- Add OpenAI-assisted extraction to enrich the local deterministic extractor.
+- Configure OpenAI extraction credentials if AI enrichment should run in production.
 - Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Add periodic restore drills.

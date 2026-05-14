@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     chroma_port: int = 8000
 
     openai_api_key: str | None = None
+    openai_extraction_enabled: bool = False
+    openai_extraction_model: str = "gpt-4.1-mini"
 
     blog_feeds: str | None = None
     blog_discovery_urls: str | None = None

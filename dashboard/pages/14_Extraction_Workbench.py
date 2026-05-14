@@ -29,6 +29,15 @@ def post(path, params=None):
         return None
 
 
+status = get("/extraction/status") or {}
+if status:
+    cols = st.columns(4)
+    cols[0].metric("Deterministic", str(status.get("deterministic_enabled")))
+    cols[1].metric("OpenAI Enabled", str(status.get("openai_enabled")))
+    cols[2].metric("OpenAI Key", "present" if status.get("openai_key_present") else "missing")
+    cols[3].metric("Model", status.get("openai_model", "n/a"))
+
+
 limit = st.number_input("Pending source limit", min_value=1, max_value=500, value=50)
 if st.button("Process Pending Sources"):
     result = post("/extraction/process-pending", {"limit": int(limit)})

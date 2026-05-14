@@ -9,7 +9,7 @@ from app.services.audit import audit
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
-from app.services.knowledge_extraction import process_pending_sources, process_source
+from app.services.knowledge_extraction import extraction_status, process_pending_sources, process_source
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
 from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
@@ -318,6 +318,11 @@ def ingest_telegram_export_request(payload: TelegramExportIngestRequest, db: Ses
 @app.get("/insights")
 def list_insights(limit: int = 100, db: Session = Depends(get_db)):
     return db.query(ExtractedInsight).order_by(ExtractedInsight.created_at.desc()).limit(limit).all()
+
+
+@app.get("/extraction/status")
+def get_extraction_status():
+    return extraction_status()
 
 
 @app.post("/extraction/process-pending")

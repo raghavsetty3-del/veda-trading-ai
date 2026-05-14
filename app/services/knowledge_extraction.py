@@ -1,8 +1,11 @@
+import json
 import re
 
+import httpx
 from sqlalchemy.orm import Session
 
 from app.models import ExtractedInsight, SourceDocument
+from app.config import settings
 from app.services.psychology import extract_psychology
 
 
@@ -76,7 +79,68 @@ def expected_conditions(text: str | None) -> dict:
     }
 
 
-def extract_knowledge(text: str | None) -> dict:
+OPENAI_EXTRACTION_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "bias": {"type": ["string", "null"], "enum": ["bullish", "bearish", "neutral", None]},
+        "timeframe": {"type": ["string", "null"]},
+        "symbols": {"type": "array", "items": {"type": "string"}},
+        "concepts": {"type": "array", "items": {"type": "string"}},
+        "psychology": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "conviction": {"type": "number"},
+                "caution": {"type": "number"},
+                "patience": {"type": "number"},
+                "raw_counts": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "conviction": {"type": "integer"},
+                        "caution": {"type": "integer"},
+                        "patience": {"type": "integer"},
+                    },
+                    "required": ["conviction", "caution", "patience"],
+                },
+            },
+            "required": ["conviction", "caution", "patience", "raw_counts"],
+        },
+        "expected_conditions": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "wait_for_retracement": {"type": "boolean"},
+                "avoid_chasing": {"type": "boolean"},
+                "requires_200ema_context": {"type": "boolean"},
+                "avoid_choppy_market": {"type": "boolean"},
+                "requires_risk_control": {"type": "boolean"},
+            },
+            "required": [
+                "wait_for_retracement",
+                "avoid_chasing",
+                "requires_200ema_context",
+                "avoid_choppy_market",
+                "requires_risk_control",
+            ],
+        },
+        "confidence": {"type": "number"},
+    },
+    "required": ["bias", "timeframe", "symbols", "concepts", "psychology", "expected_conditions", "confidence"],
+}
+
+
+def extraction_status() -> dict:
+    return {
+        "deterministic_enabled": True,
+        "openai_enabled": settings.openai_extraction_enabled,
+        "openai_key_present": bool(settings.openai_api_key),
+        "openai_model": settings.openai_extraction_model,
+    }
+
+
+def extract_deterministic_knowledge(text: str | None) -> dict:
     concepts = extract_concepts(text)
     symbols = extract_symbols(text)
     psychology = extract_psychology(text)
@@ -91,6 +155,87 @@ def extract_knowledge(text: str | None) -> dict:
         "expected_conditions": conditions,
         "confidence": confidence,
     }
+
+
+def _response_output_text(data: dict) -> str | None:
+    if data.get("output_text"):
+        return data["output_text"]
+    for item in data.get("output", []):
+        for content in item.get("content", []):
+            if content.get("type") in {"output_text", "text"} and content.get("text"):
+                return content["text"]
+    return None
+
+
+def extract_openai_knowledge(text: str | None) -> dict | None:
+    if not settings.openai_extraction_enabled or not settings.openai_api_key or not text:
+        return None
+
+    payload = {
+        "model": settings.openai_extraction_model,
+        "instructions": (
+            "Extract trading-system knowledge from the source text. Focus on NIFTY, BANKNIFTY, "
+            "price action, risk control, psychology, and rule-like market conditions. Return JSON only."
+        ),
+        "input": text[:12000],
+        "text": {
+            "format": {
+                "type": "json_schema",
+                "name": "veda_knowledge_extraction",
+                "strict": True,
+                "schema": OPENAI_EXTRACTION_SCHEMA,
+            }
+        },
+        "store": False,
+    }
+
+    with httpx.Client(timeout=45) as client:
+        response = client.post(
+            "https://api.openai.com/v1/responses",
+            headers={
+                "Authorization": f"Bearer {settings.openai_api_key}",
+                "Content-Type": "application/json",
+            },
+            json=payload,
+        )
+        response.raise_for_status()
+    output_text = _response_output_text(response.json())
+    if not output_text:
+        return None
+    return json.loads(output_text)
+
+
+def _merge_extractions(base: dict, ai: dict | None) -> dict:
+    if not ai:
+        return base
+
+    merged = {**base}
+    for key in ["bias", "timeframe"]:
+        if ai.get(key):
+            merged[key] = ai[key]
+
+    for key in ["symbols", "concepts"]:
+        merged[key] = sorted({*(base.get(key) or []), *(ai.get(key) or [])})
+
+    merged["psychology"] = {**(base.get("psychology") or {}), **(ai.get("psychology") or {})}
+    merged["expected_conditions"] = {
+        **(base.get("expected_conditions") or {}),
+        **(ai.get("expected_conditions") or {}),
+    }
+    merged["confidence"] = max(float(base.get("confidence") or 0), float(ai.get("confidence") or 0))
+    return merged
+
+
+def extract_knowledge(text: str | None) -> dict:
+    base = extract_deterministic_knowledge(text)
+    try:
+        return _merge_extractions(base, extract_openai_knowledge(text))
+    except Exception as exc:
+        base["expected_conditions"] = {
+            **base.get("expected_conditions", {}),
+            "openai_extraction_error": str(exc)[:200],
+        }
+        return base
 
 
 def process_source(db: Session, source_id: int) -> dict | None:
