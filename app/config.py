@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     blog_ingest_limit: int = 20
     blog_ingest_on_start: bool = False
 
+    market_data_sources: str | None = None
+    market_data_ingest_interval_seconds: int = 900
+    market_data_ingest_limit: int = 5000
+    market_data_ingest_on_start: bool = False
+
     telegram_api_id: str | None = None
     telegram_api_hash: str | None = None
     telegram_session_name: str = "veda_telegram"

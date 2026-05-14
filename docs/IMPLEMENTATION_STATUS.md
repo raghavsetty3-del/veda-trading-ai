@@ -31,6 +31,7 @@ Date: 2026-05-14
 - Offsite PostgreSQL backup script and operating notes are present.
 - Market data candle storage and manual ingestion skeleton are present.
 - Bulk CSV candle import is present.
+- Provider-style CSV/HTTP market-data ingestion is present and schedulable.
 - Paper-trading simulation endpoints and dashboard page are present.
 - Scheduled paper-trading evaluation is present and skips duplicate latest candles.
 - Backtest/replay evaluator and stored-candle replay are present.
@@ -46,7 +47,7 @@ Date: 2026-05-14
 ## Pending
 
 - Push the latest local commits to GitHub from the laptop session that can enter the SSH key passphrase.
-- Connect market data skeleton to a real provider.
+- Configure real market-data provider CSV/HTTP sources or broker credentials.
 - Configure production blog RSS feeds and live Telegram listener credentials.
 - Configure OpenAI extraction credentials if AI enrichment should run in production.
 - Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.

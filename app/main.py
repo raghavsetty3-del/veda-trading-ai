@@ -4,13 +4,14 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
 from app.services.knowledge_extraction import extraction_status, process_pending_sources, process_source
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
+from app.services.market_provider import ingest_configured_market_sources, ingest_market_source, market_provider_status
 from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
 from app.services.recovery import get_kill_switch, set_kill_switch
@@ -219,6 +220,25 @@ def create_market_snapshot(payload: MarketSnapshotRequest, db: Session = Depends
     snapshot = market_snapshot(db, symbol=payload.symbol, timeframe=payload.timeframe, limit=payload.limit)
     audit(db, "market.snapshot", f"Created {snapshot['symbol']} market snapshot", payload={"symbol": snapshot["symbol"], "timeframe": snapshot["timeframe"], "candles": snapshot["candles"], "ready": snapshot["ready"]})
     return snapshot
+
+
+@app.get("/market/provider/status")
+def get_market_provider_status():
+    return market_provider_status()
+
+
+@app.post("/market/provider/ingest")
+def ingest_market_provider(payload: MarketProviderIngestRequest, db: Session = Depends(get_db)):
+    result = ingest_market_source(db, payload.model_dump())
+    audit(db, "market.provider_ingest", f"Ingested market provider source for {payload.symbol}", payload=result)
+    return result
+
+
+@app.post("/market/provider/ingest-configured")
+def ingest_configured_market_provider(db: Session = Depends(get_db)):
+    result = ingest_configured_market_sources(db)
+    audit(db, "market.provider_ingest_configured", "Ingested configured market provider sources", payload=result)
+    return result
 
 
 @app.get("/paper/trades")

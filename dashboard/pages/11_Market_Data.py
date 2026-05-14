@@ -20,7 +20,7 @@ def get(path, params=None):
         return None
 
 
-def post(path, payload):
+def post(path, payload=None):
     try:
         response = requests.post(f"{API_BASE}{path}", json=payload, timeout=8)
         response.raise_for_status()
@@ -49,6 +49,41 @@ with c2:
         snapshot = post("/market/snapshot", {"symbol": symbol, "timeframe": timeframe, "limit": 50})
         if snapshot:
             st.json(snapshot)
+
+st.subheader("Provider Ingestion")
+provider_status = get("/market/provider/status") or {}
+if provider_status:
+    cols = st.columns(4)
+    cols[0].metric("Configured", str(provider_status.get("configured")))
+    cols[1].metric("Sources", provider_status.get("source_count", 0))
+    cols[2].metric("Interval", f"{provider_status.get('interval_seconds')}s")
+    cols[3].metric("Limit", provider_status.get("limit"))
+    with st.expander("Configured sources"):
+        st.json(provider_status.get("sources", []))
+    if st.button("Run Configured Provider Ingestion"):
+        result = post("/market/provider/ingest-configured")
+        if result:
+            st.json(result)
+
+with st.form("provider_ingest"):
+    source_url = st.text_input("Provider CSV URL or path")
+    source_name = st.text_input("Source Name", value=f"provider:{symbol}:{timeframe}")
+    max_rows = st.number_input("Max Rows", min_value=1, max_value=5000, value=5000, step=100)
+    provider_submitted = st.form_submit_button("Ingest Provider Source")
+
+if provider_submitted:
+    result = post(
+        "/market/provider/ingest",
+        {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "source_url": source_url,
+            "source_name": source_name,
+            "max_rows": int(max_rows),
+        },
+    )
+    if result:
+        st.json(result)
 
 st.subheader("Manual Candle Ingestion")
 with st.form("manual_candle"):

@@ -56,6 +56,14 @@ class MarketSnapshotRequest(BaseModel):
     limit: int = 50
 
 
+class MarketProviderIngestRequest(BaseModel):
+    symbol: str
+    timeframe: str = "5m"
+    source_url: str
+    source_name: str | None = None
+    max_rows: int = 5000
+
+
 class PaperTradeRequest(BaseModel):
     symbol: str
     timeframe: str = "5m"
