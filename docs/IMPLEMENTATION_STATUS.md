@@ -1,0 +1,40 @@
+# Implementation Status
+
+Date: 2026-05-14
+
+## Completed
+
+- Deployed Veda Trading AI v0.2 on Azure VM `vm-ai-trading-india`.
+- Preserved the previous SQLite deployment backup before v0.2 rollout.
+- Runs through Docker Compose with API, dashboard, worker, scheduler, PostgreSQL, Redis, ChromaDB, and Nginx.
+- Public Nginx front door is protected with Basic Auth.
+- `/api/` proxy is verified for authenticated API access.
+- PostgreSQL backup and restore scripts are present and a live backup checkpoint was created.
+- ChatGPT project context was extracted from the accessible `Veda trading system` project.
+- JustNifty PDF context was extracted from `Practical Guide to Trading and Investing`.
+- NIFTY operating playbook added.
+- BANKNIFTY operating notes added.
+- Instrument profiles added for NIFTY and BANKNIFTY.
+- Rule evaluator API and dashboard workbench added.
+- Setup evaluator API and dashboard page added.
+- Scenario lab API and dashboard page added.
+- Five NIFTY/BANKNIFTY scenario validations are passing.
+- Live trading remains disabled by default with kill switch controls.
+
+## Pending
+
+- Push the latest local commits to GitHub from the laptop session that can enter the SSH key passphrase.
+- Add real broker or market-data integration.
+- Add paper-trading execution loop before any live order path.
+- Add scheduled blog ingestion and Telegram ingestion credentials.
+- Add OpenAI-assisted extraction for new source documents.
+- Add backtesting/replay module using historical NIFTY and BANKNIFTY data.
+- Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
+- Add automated off-VM backups for PostgreSQL.
+
+## Current Access
+
+- Dashboard: `http://20.235.64.162/`
+- API proxy: `http://20.235.64.162/api/`
+- Username: `veda`
+- Password is intentionally not stored in Git.

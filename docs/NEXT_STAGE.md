@@ -1,9 +1,12 @@
 # Next Stage v0.3
 
 Recommended next build:
-1. Telegram Telethon ingestion
-2. Blog scheduled ingestion
-3. AI extraction using OpenAI API
-4. Principle/rule auto-suggestion
-5. Backtesting skeleton
-6. Market data ingestion skeleton
+1. Push local commits to GitHub from an authenticated laptop shell.
+2. Add automated off-VM PostgreSQL backup storage.
+3. Add market data ingestion skeleton for NIFTY and BANKNIFTY.
+4. Add paper-trading execution loop with kill switch enforcement.
+5. Add backtesting/replay skeleton.
+6. Add Telegram Telethon ingestion.
+7. Add blog scheduled ingestion.
+8. Add AI extraction using OpenAI API.
+9. Add principle/rule auto-suggestion.

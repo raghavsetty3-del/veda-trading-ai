@@ -8,31 +8,25 @@ Modular monolith first. Split only when justified.
 
 ```text
 Azure VM
-├── Docker Compose
-├── FastAPI API
-├── Worker
-├── Scheduler
-├── Streamlit Dashboard
-├── PostgreSQL
-├── Redis
-├── ChromaDB
-└── Backup scripts
+|-- Docker Compose
+|-- FastAPI API
+|-- Worker
+|-- Scheduler
+|-- Streamlit Dashboard
+|-- PostgreSQL
+|-- Redis
+|-- ChromaDB
+`-- Backup scripts
 ```
 
 ## Data Flow
 
 ```text
-Blog/Telegram/X/PDF
-↓
-SourceDocument raw archive
-↓
-Psychology + knowledge extraction
-↓
-Author principles + rule mappings
-↓
-Validation cases
-↓
-Replay/backtest later
-↓
-Dashboard
+Blog / Telegram / X / PDF
+-> SourceDocument raw archive
+-> Psychology + knowledge extraction
+-> Author principles + rule mappings
+-> Validation cases
+-> Replay / backtest later
+-> Dashboard
 ```

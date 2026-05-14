@@ -44,6 +44,35 @@ st.markdown(
 """
 )
 
+st.subheader("Implementation Status")
+left, right = st.columns(2)
+with left:
+    st.markdown(
+        """
+**Completed**
+- Azure VM deployment
+- Nginx front door with Basic Auth
+- NIFTY and BANKNIFTY profiles
+- Rule evaluator
+- Setup evaluator
+- Scenario lab
+- Live PostgreSQL backup checkpoint
+"""
+    )
+
+with right:
+    st.markdown(
+        """
+**Pending**
+- GitHub push from laptop passphrase session
+- Market data integration
+- Paper-trading loop
+- Backtesting/replay
+- Telegram/blog scheduled ingestion
+- Off-VM automated backups
+"""
+    )
+
 st.subheader("Core Trading Context")
 st.markdown(
     """
