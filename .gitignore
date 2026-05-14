@@ -1,0 +1,10 @@
+.env
+*.pyc
+__pycache__/
+.venv/
+data/
+backups/
+*.db
+*.sqlite
+telegram_sessions/
+.DS_Store
