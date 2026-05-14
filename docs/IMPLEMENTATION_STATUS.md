@@ -12,6 +12,7 @@ Date: 2026-05-14
 - PostgreSQL backup and restore scripts are present and a live backup checkpoint was created.
 - Dedicated Azure Blob backup storage `vedabkp260514rs/veda-postgres-backups` is configured.
 - Daily off-VM PostgreSQL backup upload is scheduled for `18:45 UTC` / `00:15 IST`.
+- Healthwatch auto-healer and systemd timer are present for the Docker Compose stack.
 - ChatGPT project context was extracted from the accessible `Veda trading system` project.
 - JustNifty PDF context was extracted from `Practical Guide to Trading and Investing`.
 - NIFTY operating playbook added.
@@ -44,6 +45,7 @@ Date: 2026-05-14
 - Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Add backup retention monitoring and periodic restore drills.
+- Add external uptime alerting beyond VM-local healthwatch.
 
 ## Current Access
 

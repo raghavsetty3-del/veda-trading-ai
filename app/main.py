@@ -29,6 +29,19 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Veda Trading AI", version="0.2.0")
 
 
+@app.get("/")
+def api_home(db: Session = Depends(get_db)):
+    return {
+        "status": "ok",
+        "service": "Veda Trading AI API",
+        "version": "0.2.0",
+        "kill_switch": get_kill_switch(db),
+        "health": "/health",
+        "docs": "/docs",
+        "dashboard": "http://20.235.64.162/",
+    }
+
+
 @app.on_event("startup")
 def startup():
     from app.db import SessionLocal

@@ -5,8 +5,9 @@ Recommended next build:
 2. Verify scheduled off-VM PostgreSQL backup uploads and retention.
 3. Connect market data skeleton to a real provider.
 4. Feed scheduled paper-trading with provider candles and promote qualified results into validation evidence.
-5. Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
-6. Configure production blog RSS feeds and live Telegram listener credentials.
-7. Add live Telegram Telethon listener.
-8. Add OpenAI-assisted extraction to enrich deterministic source extraction.
-9. Tighten activation evidence from scenario coverage into provider-backed replay and paper-trade metrics.
+5. Add external uptime alerting beyond VM-local healthwatch.
+6. Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
+7. Configure production blog RSS feeds and live Telegram listener credentials.
+8. Add live Telegram Telethon listener.
+9. Add OpenAI-assisted extraction to enrich deterministic source extraction.
+10. Tighten activation evidence from scenario coverage into provider-backed replay and paper-trade metrics.

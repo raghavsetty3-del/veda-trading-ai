@@ -1,0 +1,13 @@
+[Unit]
+Description=Veda Trading AI healthwatch auto-healer
+Wants=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/traderadmin/veda-trading-ai
+Environment=PROJECT_DIR=/home/traderadmin/veda-trading-ai
+ExecStart=/home/traderadmin/veda-trading-ai/scripts/healthwatch.sh
+User=traderadmin
+Group=traderadmin
+
