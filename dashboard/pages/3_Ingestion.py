@@ -1,3 +1,4 @@
+import json
 import os, requests, pandas as pd, streamlit as st
 API_BASE = os.getenv("API_BASE", "http://api:8000")
 st.title("Ingestion")
@@ -19,6 +20,31 @@ st.subheader("Configured Blog Feeds")
 if st.button("Run Configured Blog Ingestion"):
     r = requests.post(f"{API_BASE}/ingest/blog/configured", timeout=120)
     st.write(r.json())
+
+st.subheader("Telegram")
+telegram_status = requests.get(f"{API_BASE}/ingest/telegram/status", timeout=8).json()
+st.write(telegram_status)
+channel = st.text_input("Telegram channel/export name", value="manual-export")
+sample = [
+    {
+        "message_id": "1",
+        "text": "Sample message text",
+        "date": "2026-05-14T09:15:00",
+        "author": "manual",
+    }
+]
+raw_messages = st.text_area("Telegram messages JSON", value=json.dumps(sample, indent=2), height=180)
+if st.button("Ingest Telegram Export"):
+    try:
+        messages = json.loads(raw_messages)
+        r = requests.post(
+            f"{API_BASE}/ingest/telegram/export",
+            json={"channel": channel, "messages": messages},
+            timeout=60,
+        )
+        st.write(r.json())
+    except Exception as exc:
+        st.error(f"Telegram export ingestion failed: {exc}")
 
 st.subheader("Recent Sources")
 sources = requests.get(f"{API_BASE}/sources?limit=100", timeout=8).json()

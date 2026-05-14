@@ -6,7 +6,7 @@ Recommended next build:
 3. Connect market data skeleton to a real provider.
 4. Expand paper-trading simulation into a scheduled execution loop.
 5. Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
-6. Configure production blog RSS feeds and Telegram ingestion credentials.
-7. Add Telegram Telethon ingestion.
+6. Configure production blog RSS feeds and live Telegram listener credentials.
+7. Add live Telegram Telethon listener.
 8. Add AI extraction using OpenAI API.
 9. Add principle/rule auto-suggestion.

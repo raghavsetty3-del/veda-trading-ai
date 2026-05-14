@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.backtesting import evaluate_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
@@ -16,7 +16,9 @@ from app.services.rules import evaluate_rule, evaluate_setup
 from app.services.scenarios import get_scenario, list_scenarios
 from app.services.seed import seed_defaults
 from app.services.source_archive import archive_source_document
+from app.services.telegram_ingestion import ingest_telegram_export
 from app.ingestion.blog import fetch_blog_page
+from app.ingestion.telegram_listener import telegram_status
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Veda Trading AI", version="0.2.0")
@@ -229,6 +231,16 @@ def ingest_blog_rss(feed_url: str, limit: int = 20, db: Session = Depends(get_db
 @app.post("/ingest/blog/configured")
 def ingest_configured_blogs(db: Session = Depends(get_db)):
     return ingest_configured_blog_feeds(db)
+
+
+@app.get("/ingest/telegram/status")
+def ingest_telegram_status():
+    return telegram_status()
+
+
+@app.post("/ingest/telegram/export")
+def ingest_telegram_export_request(payload: TelegramExportIngestRequest, db: Session = Depends(get_db)):
+    return ingest_telegram_export(db, payload)
 
 
 @app.get("/insights")

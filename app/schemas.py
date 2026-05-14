@@ -82,6 +82,19 @@ class SourceDocumentCreate(BaseModel):
     media_paths: list[str] | None = None
 
 
+class TelegramExportMessage(BaseModel):
+    message_id: str | int
+    text: str
+    date: str | None = None
+    author: str | None = None
+    media_paths: list[str] | None = None
+
+
+class TelegramExportIngestRequest(BaseModel):
+    channel: str
+    messages: list[TelegramExportMessage]
+
+
 class ValidationCaseCreate(BaseModel):
     case_code: str
     title: str
