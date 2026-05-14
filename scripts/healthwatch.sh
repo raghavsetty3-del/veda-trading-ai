@@ -8,7 +8,7 @@ LOCK_FILE="${LOCK_FILE:-/tmp/veda-healthwatch.lock}"
 API_HEALTH_URL="${API_HEALTH_URL:-http://localhost:8000/health}"
 GATEWAY_URL="${GATEWAY_URL:-http://localhost/}"
 CRYPTO_PROJECT_DIR="${CRYPTO_PROJECT_DIR:-/home/traderadmin/ai-trading-system}"
-CRYPTO_HEALTH_URL="${CRYPTO_HEALTH_URL:-http://localhost:8001/api/status}"
+CRYPTO_HEALTH_URL="${CRYPTO_HEALTH_URL:-http://localhost:8101/api/status}"
 HEAL_WAIT_SECONDS="${HEAL_WAIT_SECONDS:-20}"
 
 services=(postgres redis chroma api worker scheduler dashboard nginx)
