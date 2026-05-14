@@ -10,6 +10,7 @@ from app.services.instrument_profiles import PROFILES, apply_instrument_profile,
 from app.services.psychology import extract_psychology
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.rules import evaluate_rule, evaluate_setup
+from app.services.scenarios import get_scenario, list_scenarios
 from app.services.seed import seed_defaults
 from app.ingestion.blog import fetch_blog_page, fetch_rss_entries
 
@@ -111,6 +112,40 @@ def evaluate_strategy_setup(payload: SetupEvaluationRequest, db: Session = Depen
     setup = evaluate_setup(market_context, rule_results)
     audit(db, "strategy.evaluate_setup", f"Evaluated setup stance: {setup['stance']}", payload=setup)
     return {"setup": setup, "rules": rule_results}
+
+
+def _evaluate_market_context(market_context: dict, db: Session) -> dict:
+    enriched_context = apply_instrument_profile(market_context)
+    rows = db.query(RuleMapping).filter_by(active=True).order_by(RuleMapping.rule_code).all()
+    rule_results = []
+    for row in rows:
+        evaluation = evaluate_rule(row.logic_json, enriched_context)
+        rule_results.append({
+            "rule_code": row.rule_code,
+            "rule_name": row.rule_name,
+            "principle_id": row.principle_id,
+            "matched": evaluation["matched"],
+            "passed": evaluation["passed"],
+            "failed": evaluation["failed"],
+            "expected_behavior": row.expected_behavior,
+        })
+    return {"setup": evaluate_setup(enriched_context, rule_results), "rules": rule_results}
+
+
+@app.get("/strategy/scenarios")
+def strategy_scenarios():
+    return list_scenarios()
+
+
+@app.post("/strategy/scenarios/{scenario_id}/evaluate")
+def evaluate_strategy_scenario(scenario_id: str, db: Session = Depends(get_db)):
+    scenario = get_scenario(scenario_id)
+    if not scenario:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    result = _evaluate_market_context(scenario["market_context"], db)
+    passed = result["setup"]["stance"] == scenario["expected_stance"]
+    audit(db, "strategy.evaluate_scenario", f"Evaluated scenario {scenario_id}: {'pass' if passed else 'fail'}", payload={"scenario_id": scenario_id, "passed": passed, "expected_stance": scenario["expected_stance"], "actual_stance": result["setup"]["stance"]})
+    return {"scenario": scenario, "passed": passed, **result}
 
 
 @app.get("/sources")

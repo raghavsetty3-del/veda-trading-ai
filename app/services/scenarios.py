@@ -1,0 +1,105 @@
+SCENARIOS = {
+    "nifty_bullish_lrhr": {
+        "id": "nifty_bullish_lrhr",
+        "title": "Nifty bullish LRHR pullback",
+        "description": "Bullish HH/HL structure, above 200 EMA, acceptable retracement, and calm execution state.",
+        "market_context": {
+            "symbol": "NIFTY",
+            "timeframe": "5m",
+            "market_structure": "HH_HL",
+            "price_above_ema200": True,
+            "retracement_pct": 50.0,
+            "distance_from_ema_pct": 0.7,
+            "higher_timeframe_bias": "bullish",
+            "at_channel_or_envelope_extreme": False,
+            "core_tools_aligned": True,
+            "emotional_state": "calm",
+            "adx": 24,
+        },
+        "expected_stance": "long_bias",
+    },
+    "nifty_extended_wait": {
+        "id": "nifty_extended_wait",
+        "title": "Nifty extended after fast move",
+        "description": "Bullish context but price is too far from EMA for fresh chase entry.",
+        "market_context": {
+            "symbol": "NIFTY",
+            "timeframe": "5m",
+            "market_structure": "HH_HL",
+            "price_above_ema200": True,
+            "retracement_pct": 38.2,
+            "distance_from_ema_pct": 2.1,
+            "higher_timeframe_bias": "bullish",
+            "at_channel_or_envelope_extreme": False,
+            "core_tools_aligned": True,
+            "emotional_state": "calm",
+            "adx": 25,
+        },
+        "expected_stance": "wait",
+    },
+    "banknifty_bullish_profile": {
+        "id": "banknifty_bullish_profile",
+        "title": "BankNifty bullish profile-adjusted setup",
+        "description": "BankNifty allows wider EMA extension than Nifty while still requiring adequate ADX.",
+        "market_context": {
+            "symbol": "BANKNIFTY",
+            "timeframe": "5m",
+            "market_structure": "HH_HL",
+            "price_above_ema200": True,
+            "retracement_pct": 50.0,
+            "distance_from_ema_pct": 1.8,
+            "higher_timeframe_bias": "bullish",
+            "at_channel_or_envelope_extreme": False,
+            "core_tools_aligned": True,
+            "emotional_state": "calm",
+            "adx": 24,
+        },
+        "expected_stance": "long_bias",
+    },
+    "banknifty_choppy_wait": {
+        "id": "banknifty_choppy_wait",
+        "title": "BankNifty low ADX wait",
+        "description": "BankNifty context is structurally bullish but ADX is below the BankNifty threshold.",
+        "market_context": {
+            "symbol": "BANKNIFTY",
+            "timeframe": "5m",
+            "market_structure": "HH_HL",
+            "price_above_ema200": True,
+            "retracement_pct": 50.0,
+            "distance_from_ema_pct": 1.4,
+            "higher_timeframe_bias": "bullish",
+            "at_channel_or_envelope_extreme": False,
+            "core_tools_aligned": True,
+            "emotional_state": "calm",
+            "adx": 18,
+        },
+        "expected_stance": "wait",
+    },
+    "banknifty_revenge_block": {
+        "id": "banknifty_revenge_block",
+        "title": "BankNifty revenge-trading block",
+        "description": "Even when structure is favorable, revenge state blocks the setup.",
+        "market_context": {
+            "symbol": "BANKNIFTY",
+            "timeframe": "5m",
+            "market_structure": "HH_HL",
+            "price_above_ema200": True,
+            "retracement_pct": 50.0,
+            "distance_from_ema_pct": 1.0,
+            "higher_timeframe_bias": "bullish",
+            "at_channel_or_envelope_extreme": False,
+            "core_tools_aligned": True,
+            "emotional_state": "revenge",
+            "adx": 25,
+        },
+        "expected_stance": "wait",
+    },
+}
+
+
+def list_scenarios() -> list[dict]:
+    return list(SCENARIOS.values())
+
+
+def get_scenario(scenario_id: str) -> dict | None:
+    return SCENARIOS.get(scenario_id)
