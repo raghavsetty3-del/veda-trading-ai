@@ -12,6 +12,7 @@ Date: 2026-05-14
 - PostgreSQL backup and restore scripts are present and a live backup checkpoint was created.
 - Dedicated Azure Blob backup storage `vedabkp260514rs/veda-postgres-backups` is configured.
 - Daily off-VM PostgreSQL backup upload is scheduled for `18:45 UTC` / `00:15 IST`.
+- Cron-compatible offsite backup script is verified with a successful upload.
 - Azure Blob lifecycle retention policy is present for 90-day PostgreSQL backup cleanup.
 - Healthwatch auto-healer and systemd timer are present for the Docker Compose stack.
 - Crypto bot proxy is available at `/crypto/` behind the same Basic Auth boundary.

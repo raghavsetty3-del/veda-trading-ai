@@ -61,6 +61,8 @@ After the storage account and private env file are ready, schedule a daily run f
 45 18 * * * OFFSITE_BACKUP_ENV_FILE=/home/traderadmin/veda-trading-ai/.offsite-backup.env bash /home/traderadmin/veda-trading-ai/scripts/backup_postgres_offsite.sh >> /home/traderadmin/veda-backups/offsite.log 2>&1
 ```
 
+The script resolves the project directory from its own path, so cron does not need to `cd` before invoking it.
+
 ## Retention
 
 The Azure lifecycle policy in `infra/azure/backup-lifecycle-policy.json` deletes PostgreSQL backup blobs after 90 days:

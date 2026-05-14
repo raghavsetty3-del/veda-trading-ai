@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="${PROJECT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 CONTAINER="${AZURE_BACKUP_CONTAINER:-veda-postgres-backups}"
+cd "$PROJECT_DIR"
 
 if [ -n "${OFFSITE_BACKUP_ENV_FILE:-}" ] && [ -f "$OFFSITE_BACKUP_ENV_FILE" ]; then
   set -a
