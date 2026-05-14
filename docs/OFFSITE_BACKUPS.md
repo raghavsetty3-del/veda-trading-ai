@@ -4,7 +4,7 @@ PostgreSQL backups should be copied away from the VM after creation. The local V
 
 ## Script
 
-Use:
+Use either Azure CLI login or a SAS-token env file:
 
 ```bash
 AZURE_STORAGE_ACCOUNT=<dedicated-storage-account> \
@@ -13,12 +13,27 @@ BACKUP_DIR=/home/traderadmin/veda-backups \
 bash scripts/backup_postgres_offsite.sh
 ```
 
+```bash
+OFFSITE_BACKUP_ENV_FILE=/home/traderadmin/veda-trading-ai/.offsite-backup.env \
+bash scripts/backup_postgres_offsite.sh
+```
+
 The script:
 
 - Creates a compressed PostgreSQL dump.
 - Stores the local copy under `BACKUP_DIR`.
 - Uploads the dump to Azure Blob Storage under `postgres/<timestamp>/postgres.sql.gz`.
-- Uses `az storage blob upload --auth-mode login`, so the VM or shell must already be authenticated.
+- Uses `AZURE_STORAGE_SAS_TOKEN` with `curl` when available.
+- Falls back to `az storage blob upload --auth-mode login`, so the shell can also use Azure CLI authentication.
+
+Example private env file, not committed to Git:
+
+```bash
+AZURE_STORAGE_ACCOUNT=<dedicated-storage-account>
+AZURE_BACKUP_CONTAINER=veda-postgres-backups
+AZURE_STORAGE_SAS_TOKEN='<sas-token>'
+BACKUP_DIR=/home/traderadmin/veda-backups
+```
 
 ## Azure Setup
 
@@ -40,10 +55,10 @@ az storage container create \
 
 ## Schedule
 
-After the storage account is created and the VM is authenticated, schedule a daily run from `/home/traderadmin/veda-trading-ai`:
+After the storage account and private env file are ready, schedule a daily run from `/home/traderadmin/veda-trading-ai`. The VM uses UTC, so `18:45 UTC` runs at `00:15 IST`:
 
 ```cron
-15 0 * * * AZURE_STORAGE_ACCOUNT=<dedicated-storage-account> AZURE_BACKUP_CONTAINER=veda-postgres-backups BACKUP_DIR=/home/traderadmin/veda-backups bash /home/traderadmin/veda-trading-ai/scripts/backup_postgres_offsite.sh >> /home/traderadmin/veda-backups/offsite.log 2>&1
+45 18 * * * OFFSITE_BACKUP_ENV_FILE=/home/traderadmin/veda-trading-ai/.offsite-backup.env bash /home/traderadmin/veda-trading-ai/scripts/backup_postgres_offsite.sh >> /home/traderadmin/veda-backups/offsite.log 2>&1
 ```
 
 ## Restore
