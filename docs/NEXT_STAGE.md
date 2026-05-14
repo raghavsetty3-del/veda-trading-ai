@@ -2,7 +2,7 @@
 
 Recommended next build:
 1. Push local commits to GitHub from an authenticated laptop shell.
-2. Add automated off-VM PostgreSQL backup storage.
+2. Create a dedicated Azure Storage account/container and schedule automated off-VM PostgreSQL backups.
 3. Add market data ingestion skeleton for NIFTY and BANKNIFTY.
 4. Add paper-trading execution loop with kill switch enforcement.
 5. Add backtesting/replay skeleton.

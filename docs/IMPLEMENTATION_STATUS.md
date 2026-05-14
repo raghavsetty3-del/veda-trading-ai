@@ -20,6 +20,7 @@ Date: 2026-05-14
 - Scenario lab API and dashboard page added.
 - Five NIFTY/BANKNIFTY scenario validations are passing.
 - Live trading remains disabled by default with kill switch controls.
+- Offsite PostgreSQL backup script and operating notes are present.
 
 ## Pending
 
@@ -30,7 +31,7 @@ Date: 2026-05-14
 - Add OpenAI-assisted extraction for new source documents.
 - Add backtesting/replay module using historical NIFTY and BANKNIFTY data.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
-- Add automated off-VM backups for PostgreSQL.
+- Create a dedicated Azure Storage account/container and schedule automated off-VM PostgreSQL backups.
 
 ## Current Access
 
