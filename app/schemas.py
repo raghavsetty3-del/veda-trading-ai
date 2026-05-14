@@ -64,6 +64,13 @@ class PaperTradeStatusUpdate(BaseModel):
     status: str
 
 
+class PaperSchedulerRunRequest(BaseModel):
+    symbols: list[str] | None = None
+    timeframe: str | None = None
+    limit: int | None = None
+    quantity: int | None = None
+
+
 class BacktestStep(BaseModel):
     label: str | None = None
     market_context: dict

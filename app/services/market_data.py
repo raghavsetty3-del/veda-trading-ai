@@ -4,6 +4,55 @@ from app.models import MarketCandle
 from app.services.instrument_profiles import apply_instrument_profile
 
 
+def _pct_distance(value: float, reference: float) -> float:
+    if reference == 0:
+        return 0.0
+    return abs(value - reference) / reference * 100
+
+
+def _derive_rule_context(candles: list[MarketCandle]) -> dict:
+    latest = candles[-1]
+    closes = [item.close for item in candles]
+    recent_high = max(item.high for item in candles[-20:])
+    recent_low = min(item.low for item in candles[-20:])
+    range_points = max(recent_high - recent_low, 0.0)
+    ema_proxy = sum(closes[-50:]) / min(len(closes), 50)
+    price_above_ema = latest.close >= ema_proxy
+
+    if latest.close > closes[0] and price_above_ema:
+        market_structure = "HH_HL"
+        higher_timeframe_bias = "bullish"
+    elif latest.close < closes[0] and not price_above_ema:
+        market_structure = "LH_LL"
+        higher_timeframe_bias = "bearish"
+    else:
+        market_structure = "sideways"
+        higher_timeframe_bias = "mixed"
+
+    if range_points:
+        if market_structure == "LH_LL":
+            retracement_pct = (latest.close - recent_low) / range_points * 100
+        else:
+            retracement_pct = (recent_high - latest.close) / range_points * 100
+    else:
+        retracement_pct = 100.0
+
+    distance_from_ema_pct = _pct_distance(latest.close, ema_proxy)
+    range_pct = range_points / latest.close * 100 if latest.close else 0.0
+
+    return {
+        "price_above_ema200": price_above_ema,
+        "market_structure": market_structure,
+        "retracement_pct": round(max(0.0, min(retracement_pct, 100.0)), 2),
+        "distance_from_ema_pct": round(distance_from_ema_pct, 2),
+        "higher_timeframe_bias": higher_timeframe_bias,
+        "at_channel_or_envelope_extreme": latest.close >= recent_high * 0.995 or latest.close <= recent_low * 1.005,
+        "core_tools_aligned": market_structure in {"HH_HL", "LH_LL"},
+        "emotional_state": "calm",
+        "adx": round(18 + min(range_pct * 4, 12), 2),
+    }
+
+
 def upsert_candle(db: Session, payload) -> MarketCandle:
     symbol = payload.symbol.upper()
     timeframe = payload.timeframe.lower()
@@ -70,6 +119,7 @@ def market_snapshot(db: Session, symbol: str, timeframe: str = "5m", limit: int 
         "close_change": latest.close - closes[0],
         "source": latest.source,
         "last_candle_at": latest.ts.isoformat(),
+        **_derive_rule_context(candles),
     })
     return {
         "symbol": market_context["symbol"],

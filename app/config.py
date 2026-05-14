@@ -30,6 +30,12 @@ class Settings(BaseSettings):
 
     enable_live_trading: bool = False
     enable_paper_trading: bool = True
+    paper_trading_symbols: str = "NIFTY,BANKNIFTY"
+    paper_trading_timeframe: str = "5m"
+    paper_trading_interval_seconds: int = 300
+    paper_trading_candle_limit: int = 50
+    paper_trading_quantity: int = 1
+    paper_trading_on_start: bool = False
     global_kill_switch: bool = False
     max_daily_drawdown_pct: float = 1.0
 

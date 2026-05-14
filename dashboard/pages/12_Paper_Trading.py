@@ -67,6 +67,27 @@ if submitted:
     if result:
         st.json(result)
 
+st.subheader("Scheduled Evaluation")
+scheduler = get("/paper/scheduler") or {}
+if scheduler:
+    cols = st.columns(4)
+    cols[0].metric("Enabled", str(scheduler.get("enabled")))
+    cols[1].metric("Symbols", ", ".join(scheduler.get("symbols", [])))
+    cols[2].metric("Interval", f"{scheduler.get('interval_seconds')}s")
+    cols[3].metric("Candle Limit", scheduler.get("candle_limit"))
+    if st.button("Run Scheduled Evaluation Now"):
+        result = post(
+            "/paper/scheduler/run",
+            {
+                "symbols": [symbol],
+                "timeframe": timeframe,
+                "limit": scheduler.get("candle_limit"),
+                "quantity": scheduler.get("quantity"),
+            },
+        )
+        if result:
+            st.json(result)
+
 st.subheader("Recent Paper Trades")
 trades = get("/paper/trades", {"limit": 100}) or []
 if trades:

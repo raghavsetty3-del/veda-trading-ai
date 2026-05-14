@@ -1,0 +1,118 @@
+from types import SimpleNamespace
+
+from sqlalchemy.orm import Session
+
+from app.config import settings
+from app.models import PaperTrade
+from app.services.audit import audit
+from app.services.market_data import market_snapshot
+from app.services.paper_trading import create_paper_trade
+
+
+def configured_paper_symbols() -> list[str]:
+    return [
+        item.strip().upper()
+        for item in (settings.paper_trading_symbols or "").split(",")
+        if item.strip()
+    ]
+
+
+def paper_scheduler_config() -> dict:
+    return {
+        "enabled": settings.enable_paper_trading,
+        "symbols": configured_paper_symbols(),
+        "timeframe": settings.paper_trading_timeframe,
+        "interval_seconds": settings.paper_trading_interval_seconds,
+        "candle_limit": settings.paper_trading_candle_limit,
+        "quantity": settings.paper_trading_quantity,
+        "run_on_start": settings.paper_trading_on_start,
+    }
+
+
+def _has_existing_trade_for_candle(db: Session, symbol: str, timeframe: str, last_candle_at: str | None) -> bool:
+    if not last_candle_at:
+        return False
+
+    rows = (
+        db.query(PaperTrade)
+        .filter(PaperTrade.symbol == symbol.upper(), PaperTrade.timeframe == timeframe.lower())
+        .order_by(PaperTrade.created_at.desc())
+        .limit(20)
+        .all()
+    )
+    return any(
+        (row.context or {}).get("market_context", {}).get("last_candle_at") == last_candle_at
+        for row in rows
+    )
+
+
+def run_scheduled_paper_trading(
+    db: Session,
+    symbols: list[str] | None = None,
+    timeframe: str | None = None,
+    limit: int | None = None,
+    quantity: int | None = None,
+) -> dict:
+    timeframe = (timeframe or settings.paper_trading_timeframe).lower()
+    safe_limit = max(20, min(limit or settings.paper_trading_candle_limit, 500))
+    safe_quantity = max(1, quantity or settings.paper_trading_quantity)
+    target_symbols = [item.upper() for item in (symbols or configured_paper_symbols())]
+
+    if not settings.enable_paper_trading:
+        result = {"enabled": False, "created": 0, "blocked": 0, "skipped": len(target_symbols), "items": []}
+        audit(db, "paper.scheduler_run", "Paper scheduler skipped because paper trading is disabled", payload=result)
+        return result
+
+    items = []
+    for symbol in target_symbols:
+        snapshot = market_snapshot(db, symbol=symbol, timeframe=timeframe, limit=safe_limit)
+        item = {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "candles": snapshot["candles"],
+            "ready": snapshot["ready"],
+            "created": False,
+            "blocked": False,
+            "skipped": False,
+            "reason": snapshot["reason"],
+        }
+
+        if not snapshot["ready"]:
+            item["skipped"] = True
+            items.append(item)
+            continue
+
+        last_candle_at = snapshot["market_context"].get("last_candle_at")
+        if _has_existing_trade_for_candle(db, symbol, timeframe, last_candle_at):
+            item["skipped"] = True
+            item["reason"] = "Trade already evaluated for latest candle"
+            items.append(item)
+            continue
+
+        payload = SimpleNamespace(
+            symbol=symbol,
+            timeframe=timeframe,
+            market_context=snapshot["market_context"],
+            quantity=safe_quantity,
+            allow_when_kill_switch_on=False,
+        )
+        trade_result = create_paper_trade(db, payload)
+        item.update({
+            "created": trade_result["created"],
+            "blocked": trade_result["blocked"],
+            "reason": trade_result.get("reason", "created" if trade_result["created"] else "blocked"),
+            "stance": trade_result["setup"]["stance"],
+            "side": trade_result["side"],
+            "trade": trade_result.get("trade"),
+        })
+        items.append(item)
+
+    result = {
+        "enabled": True,
+        "created": sum(1 for item in items if item["created"]),
+        "blocked": sum(1 for item in items if item["blocked"]),
+        "skipped": sum(1 for item in items if item["skipped"]),
+        "items": items,
+    }
+    audit(db, "paper.scheduler_run", "Scheduled paper trade evaluation completed", payload=result)
+    return result

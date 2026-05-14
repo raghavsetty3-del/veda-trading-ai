@@ -4,13 +4,14 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.backtesting import evaluate_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
 from app.services.knowledge_extraction import process_pending_sources, process_source
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle
+from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.rule_evidence import build_rule_activation_evidence
@@ -216,6 +217,23 @@ def update_trade(trade_id: int, payload: PaperTradeStatusUpdate, db: Session = D
         raise HTTPException(status_code=404, detail="Paper trade not found")
     audit(db, "paper.trade_update", f"Paper trade {trade_id} -> {row.status}", entity_type="paper_trade", entity_id=str(row.id))
     return row
+
+
+@app.get("/paper/scheduler")
+def paper_scheduler_status():
+    return paper_scheduler_config()
+
+
+@app.post("/paper/scheduler/run")
+def run_paper_scheduler(payload: PaperSchedulerRunRequest | None = None, db: Session = Depends(get_db)):
+    payload = payload or PaperSchedulerRunRequest()
+    return run_scheduled_paper_trading(
+        db,
+        symbols=payload.symbols,
+        timeframe=payload.timeframe,
+        limit=payload.limit,
+        quantity=payload.quantity,
+    )
 
 
 @app.post("/backtests/evaluate")

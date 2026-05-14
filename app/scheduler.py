@@ -3,11 +3,13 @@ from app.config import settings
 from app.db import SessionLocal
 from app.services.audit import audit
 from app.services.blog_ingestion import configured_blog_feeds, ingest_configured_blog_feeds
+from app.services.paper_scheduler import configured_paper_symbols, run_scheduled_paper_trading
 
 
 def main():
     last_heartbeat = 0.0
     last_blog_ingest = 0.0 if settings.blog_ingest_on_start else time.time()
+    last_paper_run = 0.0 if settings.paper_trading_on_start else time.time()
     while True:
         db = SessionLocal()
         try:
@@ -18,6 +20,9 @@ def main():
             if configured_blog_feeds() and now - last_blog_ingest >= settings.blog_ingest_interval_seconds:
                 ingest_configured_blog_feeds(db)
                 last_blog_ingest = now
+            if configured_paper_symbols() and now - last_paper_run >= settings.paper_trading_interval_seconds:
+                run_scheduled_paper_trading(db)
+                last_paper_run = now
         finally:
             db.close()
         time.sleep(60)

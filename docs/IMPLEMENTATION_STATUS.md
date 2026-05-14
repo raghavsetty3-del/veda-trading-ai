@@ -23,6 +23,7 @@ Date: 2026-05-14
 - Offsite PostgreSQL backup script and operating notes are present.
 - Market data candle storage and manual ingestion skeleton are present.
 - Paper-trading simulation endpoints and dashboard page are present.
+- Scheduled paper-trading evaluation is present and skips duplicate latest candles.
 - Backtest/replay evaluator skeleton and dashboard page are present.
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
 - Telegram export ingestion and credential readiness status are present.
@@ -36,7 +37,6 @@ Date: 2026-05-14
 
 - Push the latest local commits to GitHub from the laptop session that can enter the SSH key passphrase.
 - Connect market data skeleton to a real provider.
-- Expand paper-trading simulation into a scheduled execution loop.
 - Configure production blog RSS feeds and live Telegram listener credentials.
 - Add OpenAI-assisted extraction to enrich the local deterministic extractor.
 - Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
