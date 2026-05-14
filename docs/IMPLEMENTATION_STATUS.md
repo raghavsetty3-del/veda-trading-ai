@@ -12,6 +12,7 @@ Date: 2026-05-14
 - PostgreSQL backup and restore scripts are present and a live backup checkpoint was created.
 - Dedicated Azure Blob backup storage `vedabkp260514rs/veda-postgres-backups` is configured.
 - Daily off-VM PostgreSQL backup upload is scheduled for `18:45 UTC` / `00:15 IST`.
+- Azure Blob lifecycle retention policy is present for 90-day PostgreSQL backup cleanup.
 - Healthwatch auto-healer and systemd timer are present for the Docker Compose stack.
 - Crypto bot proxy is available at `/crypto/` behind the same Basic Auth boundary.
 - Healthwatch also keeps the crypto bot project healthy when `/home/traderadmin/ai-trading-system` exists.
@@ -47,7 +48,7 @@ Date: 2026-05-14
 - Add OpenAI-assisted extraction to enrich the local deterministic extractor.
 - Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
-- Add backup retention monitoring and periodic restore drills.
+- Add periodic restore drills.
 - Add external uptime alerting beyond VM-local healthwatch.
 
 ## Current Access

@@ -1,0 +1,26 @@
+{
+  "rules": [
+    {
+      "enabled": true,
+      "name": "deletePostgresBackupsAfter90Days",
+      "type": "Lifecycle",
+      "definition": {
+        "actions": {
+          "baseBlob": {
+            "delete": {
+              "daysAfterModificationGreaterThan": 90
+            }
+          }
+        },
+        "filters": {
+          "blobTypes": [
+            "blockBlob"
+          ],
+          "prefixMatch": [
+            "veda-postgres-backups/postgres/"
+          ]
+        }
+      }
+    }
+  ]
+}

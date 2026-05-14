@@ -61,6 +61,17 @@ After the storage account and private env file are ready, schedule a daily run f
 45 18 * * * OFFSITE_BACKUP_ENV_FILE=/home/traderadmin/veda-trading-ai/.offsite-backup.env bash /home/traderadmin/veda-trading-ai/scripts/backup_postgres_offsite.sh >> /home/traderadmin/veda-backups/offsite.log 2>&1
 ```
 
+## Retention
+
+The Azure lifecycle policy in `infra/azure/backup-lifecycle-policy.json` deletes PostgreSQL backup blobs after 90 days:
+
+```bash
+az storage account management-policy create \
+  --resource-group rg-ai-trading-india \
+  --account-name vedabkp260514rs \
+  --policy @infra/azure/backup-lifecycle-policy.json
+```
+
 ## Restore
 
 Download the selected blob, then restore with:
