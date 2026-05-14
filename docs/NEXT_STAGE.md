@@ -9,4 +9,4 @@ Recommended next build:
 6. Configure production blog RSS feeds and live Telegram listener credentials.
 7. Add live Telegram Telethon listener.
 8. Add OpenAI-assisted extraction to enrich deterministic source extraction.
-9. Connect draft rule activation to automated backtest/paper-trade evidence checks.
+9. Tighten activation evidence from scenario coverage into provider-backed replay and paper-trade metrics.

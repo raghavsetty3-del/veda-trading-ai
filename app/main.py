@@ -13,6 +13,7 @@ from app.services.knowledge_extraction import process_pending_sources, process_s
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
 from app.services.recovery import get_kill_switch, set_kill_switch
+from app.services.rule_evidence import build_rule_activation_evidence
 from app.services.rule_lifecycle import set_rule_activation
 from app.services.rules import evaluate_rule, evaluate_setup
 from app.services.scenarios import get_scenario, list_scenarios
@@ -85,11 +86,22 @@ def create_rule(payload: RuleMappingCreate, db: Session = Depends(get_db)):
 
 @app.patch("/rules/{rule_code}/activation")
 def update_rule_activation(rule_code: str, payload: RuleActivationRequest, db: Session = Depends(get_db)):
-    row = set_rule_activation(db, rule_code=rule_code, active=payload.active, validation_note=payload.validation_note)
-    if not row:
+    result = set_rule_activation(db, rule_code=rule_code, active=payload.active, validation_note=payload.validation_note)
+    if not result:
         raise HTTPException(status_code=404, detail="Rule not found")
-    audit(db, "rule.activation", f"Rule {rule_code} active={payload.active}", entity_type="rule", entity_id=str(row["id"]), payload={"active": payload.active, "validation_note": payload.validation_note})
-    return row
+    rule = result["rule"]
+    audit(db, "rule.activation", f"Rule {rule_code} active={payload.active}", severity="WARN" if result["blocked"] else "INFO", entity_type="rule", entity_id=str(rule["id"]), payload={"active": payload.active, "validation_note": payload.validation_note, "blocked": result["blocked"], "evidence": result["evidence"]})
+    if result["blocked"]:
+        raise HTTPException(status_code=409, detail=result)
+    return result
+
+
+@app.get("/rules/{rule_code}/evidence")
+def get_rule_evidence(rule_code: str, db: Session = Depends(get_db)):
+    evidence = build_rule_activation_evidence(db, rule_code)
+    if not evidence:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    return evidence
 
 
 @app.post("/rules/evaluate")

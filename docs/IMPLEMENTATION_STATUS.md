@@ -30,6 +30,7 @@ Date: 2026-05-14
 - Review-only rule suggestion generator is present.
 - Reviewed suggestion promotion to inactive draft rules is present.
 - Draft rule activation/deactivation workflow with validation notes is present.
+- Draft rule activation now checks automated scenario evidence and blocks incomplete activations.
 
 ## Pending
 
@@ -39,7 +40,6 @@ Date: 2026-05-14
 - Configure production blog RSS feeds and live Telegram listener credentials.
 - Add OpenAI-assisted extraction to enrich the local deterministic extractor.
 - Connect replay skeleton to historical NIFTY and BANKNIFTY candle data.
-- Connect draft rule activation to automated backtest/paper-trade evidence checks.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Create a dedicated Azure Storage account/container and schedule automated off-VM PostgreSQL backups.
 

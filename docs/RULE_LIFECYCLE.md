@@ -15,7 +15,16 @@ Draft rules do not affect evaluator behavior.
 
 ## Activation
 
-Activate only after review, backtest, and paper-trade validation:
+Activate only after review, backtest, and paper-trade validation. The API now checks
+automated scenario evidence before allowing activation:
+
+```bash
+curl "http://localhost:8000/rules/DRAFT-RETRACEMENT-LRHR/evidence"
+```
+
+Activation is blocked when the rule has no machine-readable conditions, any scenario
+is missing required fields, or the rule does not match at least one validation
+scenario.
 
 ```bash
 curl -X PATCH "http://localhost:8000/rules/DRAFT-RETRACEMENT-LRHR/activation" \
@@ -32,4 +41,5 @@ active=true
 
 Deactivation uses the same endpoint with `active=false`.
 
-All activation changes are written to the audit log.
+All activation attempts are written to the audit log, including blocked attempts and
+their evidence payload.
