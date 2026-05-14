@@ -16,6 +16,9 @@ class Settings(BaseSettings):
 
     blog_feeds: str | None = None
     blog_discovery_urls: str | None = None
+    blog_ingest_interval_seconds: int = 3600
+    blog_ingest_limit: int = 20
+    blog_ingest_on_start: bool = False
 
     telegram_api_id: str | None = None
     telegram_api_hash: str | None = None

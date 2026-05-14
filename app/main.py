@@ -7,15 +7,16 @@ from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle
 from app.schemas import AuditEvent, BacktestRequest, MarketCandleCreate, MarketSnapshotRequest, PaperTradeRequest, PaperTradeStatusUpdate, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.backtesting import evaluate_backtest
+from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
-from app.services.psychology import extract_psychology
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.rules import evaluate_rule, evaluate_setup
 from app.services.scenarios import get_scenario, list_scenarios
 from app.services.seed import seed_defaults
-from app.ingestion.blog import fetch_blog_page, fetch_rss_entries
+from app.services.source_archive import archive_source_document
+from app.ingestion.blog import fetch_blog_page
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Veda Trading AI", version="0.2.0")
@@ -205,17 +206,9 @@ def list_sources(limit: int = 100, db: Session = Depends(get_db)):
 
 @app.post("/sources")
 def create_source(payload: SourceDocumentCreate, db: Session = Depends(get_db)):
-    existing = None
-    if payload.source_url:
-        existing = db.query(SourceDocument).filter_by(source_type=payload.source_type, source_url=payload.source_url).first()
-    if existing:
-        return existing
-    row = SourceDocument(**payload.model_dump())
-    db.add(row); db.commit(); db.refresh(row)
-    psychology = extract_psychology(row.raw_text)
-    db.add(ExtractedInsight(source_document_id=row.id, psychology=psychology, concepts=[], confidence=None))
-    db.commit()
-    audit(db, "source.ingested", f"Ingested source {row.source_type}: {row.title}", entity_type="source_document", entity_id=str(row.id), payload={"psychology_preview": psychology})
+    row, was_created, psychology = archive_source_document(db, payload.model_dump())
+    if was_created:
+        audit(db, "source.ingested", f"Ingested source {row.source_type}: {row.title}", entity_type="source_document", entity_id=str(row.id), payload={"psychology_preview": psychology})
     return row
 
 
@@ -228,13 +221,14 @@ def ingest_blog_page(url: str, db: Session = Depends(get_db)):
 
 @app.post("/ingest/blog/rss")
 def ingest_blog_rss(feed_url: str, limit: int = 20, db: Session = Depends(get_db)):
-    entries = fetch_rss_entries(feed_url)[:limit]
-    created = []
-    for item in entries:
-        payload = SourceDocumentCreate(**{k: v for k, v in item.items() if k in SourceDocumentCreate.model_fields})
-        created.append(create_source(payload, db))
-    audit(db, "blog.rss_ingested", f"Ingested RSS feed {feed_url}", payload={"count": len(created)})
-    return {"count": len(created), "items": created}
+    result = ingest_blog_feed(db, feed_url, limit=limit)
+    audit(db, "blog.rss_ingested", f"Ingested RSS feed {feed_url}", payload=result)
+    return result
+
+
+@app.post("/ingest/blog/configured")
+def ingest_configured_blogs(db: Session = Depends(get_db)):
+    return ingest_configured_blog_feeds(db)
 
 
 @app.get("/insights")

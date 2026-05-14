@@ -15,6 +15,11 @@ if st.button("Ingest RSS") and feed_url:
     r = requests.post(f"{API_BASE}/ingest/blog/rss", params={"feed_url": feed_url, "limit": int(limit)}, timeout=60)
     st.write(r.json())
 
+st.subheader("Configured Blog Feeds")
+if st.button("Run Configured Blog Ingestion"):
+    r = requests.post(f"{API_BASE}/ingest/blog/configured", timeout=120)
+    st.write(r.json())
+
 st.subheader("Recent Sources")
 sources = requests.get(f"{API_BASE}/sources?limit=100", timeout=8).json()
 if sources:
