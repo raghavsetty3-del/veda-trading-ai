@@ -13,6 +13,8 @@ Date: 2026-05-14
 - Dedicated Azure Blob backup storage `vedabkp260514rs/veda-postgres-backups` is configured.
 - Daily off-VM PostgreSQL backup upload is scheduled for `18:45 UTC` / `00:15 IST`.
 - Healthwatch auto-healer and systemd timer are present for the Docker Compose stack.
+- Crypto bot proxy is available at `/crypto/` behind the same Basic Auth boundary.
+- Healthwatch also keeps the crypto bot project healthy when `/home/traderadmin/ai-trading-system` exists.
 - ChatGPT project context was extracted from the accessible `Veda trading system` project.
 - JustNifty PDF context was extracted from `Practical Guide to Trading and Investing`.
 - NIFTY operating playbook added.

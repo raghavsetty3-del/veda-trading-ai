@@ -7,6 +7,8 @@ LOG_FILE="${LOG_FILE:-$PROJECT_DIR/logs/healthwatch.log}"
 LOCK_FILE="${LOCK_FILE:-/tmp/veda-healthwatch.lock}"
 API_HEALTH_URL="${API_HEALTH_URL:-http://localhost:8000/health}"
 GATEWAY_URL="${GATEWAY_URL:-http://localhost/}"
+CRYPTO_PROJECT_DIR="${CRYPTO_PROJECT_DIR:-/home/traderadmin/ai-trading-system}"
+CRYPTO_HEALTH_URL="${CRYPTO_HEALTH_URL:-http://localhost:8001/api/status}"
 HEAL_WAIT_SECONDS="${HEAL_WAIT_SECONDS:-20}"
 
 services=(postgres redis chroma api worker scheduler dashboard nginx)
@@ -77,6 +79,14 @@ collect_issues() {
   if [[ "$gateway_code" != "200" && "$gateway_code" != "401" ]]; then
     issues+=("gateway_unexpected_status:$gateway_code")
   fi
+
+  if [[ -d "$CRYPTO_PROJECT_DIR" ]]; then
+    if ! docker ps --format '{{.Names}}' | grep -qx 'ai-trading-bot'; then
+      issues+=("crypto_bot_missing")
+    elif ! curl -fsS --max-time 5 "$CRYPTO_HEALTH_URL" >/dev/null; then
+      issues+=("crypto_bot_health_failed")
+    fi
+  fi
 }
 
 heal_stack() {
@@ -86,8 +96,16 @@ heal_stack() {
   post_audit "WARNING" "Healthwatch detected an unhealthy stack and started auto-heal."
 
   if docker ps --format '{{.Names}}' | grep -qx 'ai-trading-bot'; then
-    log "stopping_legacy_port_conflict container=ai-trading-bot"
-    docker stop ai-trading-bot >>"$LOG_FILE" 2>&1 || true
+    legacy_ports="$(docker port ai-trading-bot 8000/tcp 2>/dev/null || true)"
+    if printf '%s\n' "$legacy_ports" | grep -Eq '(^|:)8000$'; then
+      log "stopping_legacy_port_conflict container=ai-trading-bot ports=$legacy_ports"
+      docker stop ai-trading-bot >>"$LOG_FILE" 2>&1 || true
+    fi
+  fi
+
+  if [[ -d "$CRYPTO_PROJECT_DIR" ]]; then
+    log "ensuring_crypto_bot project_dir=$CRYPTO_PROJECT_DIR"
+    (cd "$CRYPTO_PROJECT_DIR" && docker compose up -d --remove-orphans) >>"$LOG_FILE" 2>&1 || true
   fi
 
   $COMPOSE up -d --remove-orphans >>"$LOG_FILE" 2>&1 || true

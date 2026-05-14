@@ -5,6 +5,8 @@ services:
     depends_on:
       - api
       - dashboard
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "80:80"
     volumes:

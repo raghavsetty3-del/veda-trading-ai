@@ -21,6 +21,25 @@ Logs are written to:
 
 Healthwatch also writes audit events to the API when auto-heal starts, succeeds, or leaves remaining issues.
 
+If `/home/traderadmin/ai-trading-system` exists, healthwatch also verifies the crypto bot container and its local status endpoint:
+
+```text
+http://localhost:8001/api/status
+```
+
+During healing, it restarts that project with `docker compose up -d --remove-orphans`. It only stops the legacy `ai-trading-bot` container when it is occupying host port `8000`, so the current bot can keep running on port `8001`.
+
+## Crypto Proxy
+
+Nginx exposes the crypto bot behind the existing Basic Auth boundary:
+
+```text
+http://20.235.64.162/crypto/
+http://20.235.64.162/crypto/api/status
+```
+
+The proxy uses Docker `host-gateway` through `host.docker.internal` to reach the bot on host port `8001`.
+
 ## systemd Timer
 
 The timer runs every 2 minutes:
