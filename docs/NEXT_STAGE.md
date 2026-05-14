@@ -6,8 +6,9 @@ Recommended next build:
 3. Configure real market-data provider CSV/HTTP sources or broker credentials.
 4. Expand paper-trade validation from observation counts into P&L and exit-quality metrics.
 5. Configure a real external webhook receiver for healthwatch alerts.
-6. Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
-7. Configure production blog RSS feeds and live Telegram listener credentials.
-8. Add live Telegram Telethon listener.
-9. Add OpenAI-assisted extraction to enrich deterministic source extraction.
-10. Tighten activation evidence from scenario coverage into provider-backed replay and paper-trade metrics.
+6. Monitor weekly restore drill logs and audit events.
+7. Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
+8. Configure production blog RSS feeds and live Telegram listener credentials.
+9. Add live Telegram Telethon listener.
+10. Add OpenAI-assisted extraction to enrich deterministic source extraction.
+11. Tighten activation evidence from scenario coverage into provider-backed replay and paper-trade metrics.

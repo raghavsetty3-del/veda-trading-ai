@@ -89,3 +89,16 @@ bash scripts/verify_postgres_backup.sh /path/to/postgres.sql.gz
 ```
 
 The drill removes the temporary container after verification.
+
+The VM also includes a scheduled wrapper that selects the newest local PostgreSQL backup and runs the same non-destructive drill weekly:
+
+```bash
+sudo systemctl status veda-restore-drill.timer
+sudo journalctl -u veda-restore-drill.service -n 100 --no-pager
+```
+
+Manual run:
+
+```bash
+PROJECT_DIR=/home/traderadmin/veda-trading-ai BACKUP_DIR=/home/traderadmin/veda-backups bash scripts/run_restore_drill.sh
+```

@@ -15,6 +15,7 @@ Date: 2026-05-14
 - Cron-compatible offsite backup script is verified with a successful upload.
 - Azure Blob lifecycle retention policy is present for 90-day PostgreSQL backup cleanup.
 - Non-destructive PostgreSQL restore drill script is present and verified.
+- Weekly non-destructive PostgreSQL restore drill timer is present.
 - Healthwatch auto-healer and systemd timer are present for the Docker Compose stack.
 - Healthwatch supports optional external webhook alerts through `.healthwatch.env`.
 - Crypto bot proxy is available at `/crypto/` behind the same Basic Auth boundary.
@@ -55,7 +56,7 @@ Date: 2026-05-14
 - Configure OpenAI extraction credentials if AI enrichment should run in production.
 - Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
-- Schedule periodic restore drills.
+- Monitor weekly restore drill logs and audit events.
 - Configure an external webhook receiver for healthwatch alerts if desired.
 
 ## Current Access

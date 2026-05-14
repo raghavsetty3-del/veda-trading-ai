@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Veda PostgreSQL restore drill weekly
+
+[Timer]
+OnCalendar=Sun *-*-* 02:20:00
+AccuracySec=5min
+Persistent=true
+Unit=veda-restore-drill.service
+
+[Install]
+WantedBy=timers.target

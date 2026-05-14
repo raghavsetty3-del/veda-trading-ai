@@ -1,0 +1,13 @@
+[Unit]
+Description=Veda PostgreSQL restore drill
+Wants=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/traderadmin/veda-trading-ai
+Environment=PROJECT_DIR=/home/traderadmin/veda-trading-ai
+Environment=BACKUP_DIR=/home/traderadmin/veda-backups
+ExecStart=/home/traderadmin/veda-trading-ai/scripts/run_restore_drill.sh
+User=traderadmin
+Group=traderadmin
