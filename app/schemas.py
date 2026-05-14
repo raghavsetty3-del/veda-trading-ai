@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from datetime import datetime
 
 
 class PrincipleCreate(BaseModel):
@@ -26,6 +27,24 @@ class RuleEvaluationRequest(BaseModel):
 
 class SetupEvaluationRequest(BaseModel):
     market_context: dict
+
+
+class MarketCandleCreate(BaseModel):
+    symbol: str
+    timeframe: str = "5m"
+    ts: datetime
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: float | None = None
+    source: str = "manual"
+
+
+class MarketSnapshotRequest(BaseModel):
+    symbol: str
+    timeframe: str = "5m"
+    limit: int = 50
 
 
 class SourceDocumentCreate(BaseModel):

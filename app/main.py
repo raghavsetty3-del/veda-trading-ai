@@ -3,10 +3,11 @@ from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
-from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
+from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, RuleMapping, SourceDocument, SystemState, ValidationCase
+from app.schemas import AuditEvent, MarketCandleCreate, MarketSnapshotRequest, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SetupEvaluationRequest, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
+from app.services.market_data import latest_candles, market_snapshot, upsert_candle
 from app.services.psychology import extract_psychology
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.rules import evaluate_rule, evaluate_setup
@@ -146,6 +147,25 @@ def evaluate_strategy_scenario(scenario_id: str, db: Session = Depends(get_db)):
     passed = result["setup"]["stance"] == scenario["expected_stance"]
     audit(db, "strategy.evaluate_scenario", f"Evaluated scenario {scenario_id}: {'pass' if passed else 'fail'}", payload={"scenario_id": scenario_id, "passed": passed, "expected_stance": scenario["expected_stance"], "actual_stance": result["setup"]["stance"]})
     return {"scenario": scenario, "passed": passed, **result}
+
+
+@app.get("/market/candles")
+def list_market_candles(symbol: str = "NIFTY", timeframe: str = "5m", limit: int = 50, db: Session = Depends(get_db)):
+    return latest_candles(db, symbol=symbol, timeframe=timeframe, limit=limit)
+
+
+@app.post("/market/candles")
+def create_market_candle(payload: MarketCandleCreate, db: Session = Depends(get_db)):
+    row = upsert_candle(db, payload)
+    audit(db, "market.candle_upsert", f"Upserted {row.symbol} {row.timeframe} candle", entity_type="market_candle", entity_id=str(row.id), payload={"symbol": row.symbol, "timeframe": row.timeframe, "ts": row.ts.isoformat(), "source": row.source})
+    return row
+
+
+@app.post("/market/snapshot")
+def create_market_snapshot(payload: MarketSnapshotRequest, db: Session = Depends(get_db)):
+    snapshot = market_snapshot(db, symbol=payload.symbol, timeframe=payload.timeframe, limit=payload.limit)
+    audit(db, "market.snapshot", f"Created {snapshot['symbol']} market snapshot", payload={"symbol": snapshot["symbol"], "timeframe": snapshot["timeframe"], "candles": snapshot["candles"], "ready": snapshot["ready"]})
+    return snapshot
 
 
 @app.get("/sources")

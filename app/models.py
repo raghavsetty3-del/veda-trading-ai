@@ -104,6 +104,23 @@ class StrategyVersion(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
+class MarketCandle(Base):
+    __tablename__ = "market_candles"
+    __table_args__ = (UniqueConstraint("symbol", "timeframe", "ts", name="uq_market_candle"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    symbol: Mapped[str] = mapped_column(String(50), index=True)
+    timeframe: Mapped[str] = mapped_column(String(20), index=True)
+    ts: Mapped[datetime] = mapped_column(DateTime, index=True)
+    open: Mapped[float] = mapped_column(Float)
+    high: Mapped[float] = mapped_column(Float)
+    low: Mapped[float] = mapped_column(Float)
+    close: Mapped[float] = mapped_column(Float)
+    volume: Mapped[float | None] = mapped_column(Float, nullable=True)
+    source: Mapped[str] = mapped_column(String(100), default="manual")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class FailedJob(Base):
     __tablename__ = "failed_jobs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

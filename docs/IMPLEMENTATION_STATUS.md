@@ -21,11 +21,12 @@ Date: 2026-05-14
 - Five NIFTY/BANKNIFTY scenario validations are passing.
 - Live trading remains disabled by default with kill switch controls.
 - Offsite PostgreSQL backup script and operating notes are present.
+- Market data candle storage and manual ingestion skeleton are present.
 
 ## Pending
 
 - Push the latest local commits to GitHub from the laptop session that can enter the SSH key passphrase.
-- Add real broker or market-data integration.
+- Connect market data skeleton to a real provider.
 - Add paper-trading execution loop before any live order path.
 - Add scheduled blog ingestion and Telegram ingestion credentials.
 - Add OpenAI-assisted extraction for new source documents.
