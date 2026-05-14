@@ -20,6 +20,10 @@ class RuleMappingCreate(BaseModel):
     version: str = "0.1.0"
 
 
+class RuleEvaluationRequest(BaseModel):
+    market_context: dict
+
+
 class SourceDocumentCreate(BaseModel):
     source_type: str
     source_url: str | None = None

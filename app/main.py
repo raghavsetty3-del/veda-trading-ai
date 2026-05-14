@@ -4,10 +4,11 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, PrincipleCreate, RuleMappingCreate, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, PrincipleCreate, RuleEvaluationRequest, RuleMappingCreate, SourceDocumentCreate, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.psychology import extract_psychology
 from app.services.recovery import get_kill_switch, set_kill_switch
+from app.services.rules import evaluate_rule
 from app.services.seed import seed_defaults
 from app.ingestion.blog import fetch_blog_page, fetch_rss_entries
 
@@ -59,6 +60,24 @@ def create_rule(payload: RuleMappingCreate, db: Session = Depends(get_db)):
     db.add(row); db.commit(); db.refresh(row)
     audit(db, "rule.create", f"Created rule {row.rule_code}", entity_type="rule", entity_id=str(row.id))
     return row
+
+
+@app.post("/rules/evaluate")
+def evaluate_rules(payload: RuleEvaluationRequest, db: Session = Depends(get_db)):
+    rows = db.query(RuleMapping).filter_by(active=True).order_by(RuleMapping.rule_code).all()
+    results = []
+    for row in rows:
+        evaluation = evaluate_rule(row.logic_json, payload.market_context)
+        results.append({
+            "rule_code": row.rule_code,
+            "rule_name": row.rule_name,
+            "principle_id": row.principle_id,
+            "matched": evaluation["matched"],
+            "passed": evaluation["passed"],
+            "failed": evaluation["failed"],
+            "expected_behavior": row.expected_behavior,
+        })
+    return {"market_context": payload.market_context, "results": results}
 
 
 @app.get("/sources")
