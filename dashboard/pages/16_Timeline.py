@@ -36,30 +36,30 @@ timeline = [
     {
         "Phase": "GitHub sync",
         "Target": "2026-05-15",
-        "Estimate": "10 min",
-        "Owner": "User",
+        "Estimate": "Done",
+        "Owner": "User + Codex",
         "Status": "Current commits pushed",
     },
     {
         "Phase": "Real market data provider",
-        "Target": "2026-05-15 to 2026-05-16",
-        "Estimate": "0.5-1 day after URL/API credentials",
+        "Target": "2026-05-15",
+        "Estimate": "Done",
         "Owner": "Shared",
-        "Status": "Waiting for provider details",
+        "Status": "DhanHQ active for NIFTY and BANKNIFTY",
     },
     {
         "Phase": "Historical NIFTY/BANKNIFTY candles",
-        "Target": "2026-05-16 to 2026-05-17",
-        "Estimate": "0.5-1 day after files/source",
+        "Target": "2026-05-15",
+        "Estimate": "Done",
         "Owner": "Shared",
-        "Status": "Waiting for provider-backed OHLC data",
+        "Status": "Dhan provider-backed candles loaded",
     },
     {
         "Phase": "Paper-trade evidence run",
-        "Target": "2026-05-18 to 2026-05-24",
+        "Target": "2026-05-15 to 2026-05-24",
         "Estimate": "5 trading sessions minimum",
         "Owner": "System",
-        "Status": "Needs live/provider candles",
+        "Status": "Strict LRHR scheduler active; collecting realized exits",
     },
     {
         "Phase": "Rule tuning from evidence",
@@ -120,6 +120,28 @@ if provider_candle_counts or total_candle_counts:
                 "Total": total_candle_counts.get(symbol, 0),
             }
             for symbol in symbols
+        ]),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+paper = readiness.get("paper", [])
+if paper:
+    st.subheader("Paper Performance")
+    st.dataframe(
+        pd.DataFrame([
+            {
+                "Symbol": item.get("symbol"),
+                "Closed": item.get("closed_paper_trades"),
+                "Minimum": item.get("minimum_review_trades"),
+                "Sample Ready": item.get("sample_ready"),
+                "Gross Profit": item.get("gross_profit"),
+                "Gross Loss": item.get("gross_loss"),
+                "Net P&L": item.get("net_realized_pnl"),
+                "Profit Factor": item.get("profit_factor_label"),
+                "Avg R": item.get("average_r_multiple"),
+            }
+            for item in paper
         ]),
         use_container_width=True,
         hide_index=True,

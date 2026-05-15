@@ -56,7 +56,10 @@ with left:
 - Rule evaluator
 - Setup evaluator
 - Scenario lab
-- Live PostgreSQL backup checkpoint
+- DhanHQ market data provider
+- Strict JustNifty LRHR paper scheduler
+- Paper performance and profit-factor metrics
+- Live PostgreSQL backups and restore drills
 """
     )
 
@@ -64,12 +67,11 @@ with right:
     st.markdown(
         """
 **Pending**
-- GitHub push from laptop passphrase session
-- Market data integration
-- Paper-trading loop
-- Backtesting/replay
+- At least 20 realized paper exits per reviewed symbol
+- Positive sample-ready profit factor
 - Telegram/blog scheduled ingestion
-- Off-VM automated backups
+- External healthwatch webhook URL
+- Optional OpenAI enrichment key
 """
     )
 
