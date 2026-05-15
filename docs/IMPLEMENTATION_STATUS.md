@@ -49,6 +49,7 @@ Date: 2026-05-14
 - Reviewed suggestion promotion to inactive draft rules is present.
 - Draft rule activation/deactivation workflow with validation notes is present.
 - Draft rule activation now checks automated scenario evidence and blocks incomplete activations.
+- Timeline and live-readiness gates are documented and visible in the dashboard.
 
 ## Pending
 
