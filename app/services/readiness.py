@@ -77,6 +77,7 @@ def build_readiness_report(db: Session) -> dict:
     paper = [_paper_metrics(db, symbol) for symbol in symbols]
     candle_counts = {symbol: _candle_count(db, symbol) for symbol in symbols}
     restore_drill = _latest_successful_audit(db, "ops.restore_drill")
+    offsite_backup = _latest_successful_audit(db, "ops.offsite_backup")
     kill_switch = get_kill_switch(db)
 
     gates = [
@@ -114,6 +115,11 @@ def build_readiness_report(db: Session) -> dict:
             "gate": "restore_drill_seen",
             "ready": restore_drill is not None,
             "detail": restore_drill["created_at"] if restore_drill else "No successful restore drill audit event found.",
+        },
+        {
+            "gate": "offsite_backup_seen",
+            "ready": offsite_backup is not None,
+            "detail": offsite_backup["created_at"] if offsite_backup else "No successful offsite backup audit event found.",
         },
         {
             "gate": "external_alert_receiver_configured",
@@ -158,4 +164,5 @@ def build_readiness_report(db: Session) -> dict:
         "paper": paper,
         "candle_counts": candle_counts,
         "restore_drill": restore_drill,
+        "offsite_backup": offsite_backup,
     }

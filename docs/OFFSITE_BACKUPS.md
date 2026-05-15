@@ -25,6 +25,7 @@ The script:
 - Uploads the dump to Azure Blob Storage under `postgres/<timestamp>/postgres.sql.gz`.
 - Uses `AZURE_STORAGE_SAS_TOKEN` with `curl` when available.
 - Falls back to `az storage blob upload --auth-mode login`, so the shell can also use Azure CLI authentication.
+- Writes an `ops.offsite_backup` audit event after successful upload.
 
 Example private env file, not committed to Git:
 

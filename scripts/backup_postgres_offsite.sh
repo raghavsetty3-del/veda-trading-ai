@@ -5,7 +5,32 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 CONTAINER="${AZURE_BACKUP_CONTAINER:-veda-postgres-backups}"
+API_AUDIT_URL="${API_AUDIT_URL:-http://localhost:8000/audit}"
 cd "$PROJECT_DIR"
+
+json_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  printf '%s' "$value"
+}
+
+post_audit() {
+  local severity="$1"
+  local message="$2"
+  local blob_name="${3:-}"
+  local file_path="${4:-}"
+  local escaped_message escaped_blob escaped_file
+
+  escaped_message="$(json_escape "$message")"
+  escaped_blob="$(json_escape "$blob_name")"
+  escaped_file="$(json_escape "$file_path")"
+  curl -fsS -X POST "$API_AUDIT_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"event_type\":\"ops.offsite_backup\",\"severity\":\"$severity\",\"message\":\"$escaped_message\",\"payload\":{\"blob_name\":\"$escaped_blob\",\"file\":\"$escaped_file\",\"time\":\"$(date -Is)\"}}" \
+    >/dev/null 2>&1 || true
+}
 
 if [ -n "${OFFSITE_BACKUP_ENV_FILE:-}" ] && [ -f "$OFFSITE_BACKUP_ENV_FILE" ]; then
   set -a
@@ -52,3 +77,4 @@ else
 fi
 
 echo "Offsite backup complete: $BLOB_NAME"
+post_audit "INFO" "Offsite PostgreSQL backup uploaded successfully." "$BLOB_NAME" "$FILE"
