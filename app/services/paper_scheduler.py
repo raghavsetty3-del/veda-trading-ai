@@ -6,7 +6,7 @@ from app.config import settings
 from app.models import PaperTrade
 from app.services.audit import audit
 from app.services.market_data import market_snapshot
-from app.services.paper_trading import create_paper_trade
+from app.services.paper_trading import create_paper_trade, reconcile_open_paper_trades
 
 
 def configured_paper_symbols() -> list[str]:
@@ -63,6 +63,7 @@ def run_scheduled_paper_trading(
         audit(db, "paper.scheduler_run", "Paper scheduler skipped because paper trading is disabled", payload=result)
         return result
 
+    reconciliation = reconcile_open_paper_trades(db, symbols=target_symbols, timeframe=timeframe)
     items = []
     for symbol in target_symbols:
         snapshot = market_snapshot(db, symbol=symbol, timeframe=timeframe, limit=safe_limit)
@@ -109,6 +110,7 @@ def run_scheduled_paper_trading(
 
     result = {
         "enabled": True,
+        "reconciliation": reconciliation,
         "created": sum(1 for item in items if item["created"]),
         "blocked": sum(1 for item in items if item["blocked"]),
         "skipped": sum(1 for item in items if item["skipped"]),

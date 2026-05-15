@@ -39,6 +39,7 @@ Date: 2026-05-14
 - Paper-trading simulation endpoints and dashboard page are present.
 - Scheduled paper-trading evaluation is present and skips duplicate latest candles.
 - Paper trades can record exits, realized P&L, and R-multiple.
+- Open paper trades can be reconciled automatically against later stored candles for target/stop exits.
 - Paper-trading observations and closed-trade P&L can now create validation evidence cases.
 - Strategy trade-export CSVs can now create performance validation evidence cases.
 - Backtest/replay evaluator and stored-candle replay are present.

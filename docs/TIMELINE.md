@@ -11,7 +11,7 @@ Completed as of 2026-05-15:
 - Azure deployment is live behind Basic Auth.
 - NIFTY and BANKNIFTY instrument profiles are present.
 - Rule, setup, scenario, replay, paper-trade, and validation workflows are present.
-- Paper trades can record exits, realized P&L, and R-multiple.
+- Paper trades can record and automatically reconcile exits, realized P&L, and R-multiple.
 - BankNifty strategy trade export was imported and recorded as failed performance evidence because net P&L was negative.
 - Healthwatch, daily offsite backups, and weekly restore drills are active.
 - Live trading remains disabled.
@@ -23,7 +23,7 @@ Completed as of 2026-05-15:
 | GitHub sync | 2026-05-15 | 10 minutes | User | Current commits pushed |
 | Real market data provider | 2026-05-15 to 2026-05-16 | 0.5-1 day after URL/API credentials | Shared | Angel One and Dhan connectors ready; waiting for credentials |
 | Historical NIFTY/BANKNIFTY candles | 2026-05-16 to 2026-05-17 | 0.5-1 day after files/source | Shared | Waiting for OHLC data source |
-| Paper-trade evidence run | 2026-05-18 to 2026-05-24 | 5 trading sessions minimum | System | Needs live/provider candles |
+| Paper-trade evidence run | 2026-05-18 to 2026-05-24 | 5 trading sessions minimum | System | Provider candles active; collecting signals and exits |
 | Rule tuning from evidence | 2026-05-25 to 2026-05-29 | 3-5 days | Codex + User review | Depends on paper evidence |
 | External alerts | 2026-05-15 | 30-60 minutes after webhook URL | Shared | Hook is built, URL needed |
 | Telegram/blog production ingestion | 2026-05-16 to 2026-05-17 | 0.5-1 day after credentials | Shared | Waiting for Telegram/RSS details |

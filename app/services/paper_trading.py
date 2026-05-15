@@ -2,7 +2,7 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from app.models import PaperTrade, RuleMapping
+from app.models import MarketCandle, PaperTrade, RuleMapping
 from app.services.instrument_profiles import apply_instrument_profile
 from app.services.recovery import get_kill_switch
 from app.services.rules import evaluate_rule, evaluate_setup
@@ -135,6 +135,102 @@ def _r_multiple(row: PaperTrade, realized_pnl: float | None) -> float | None:
     if risk <= 0:
         return None
     return round(realized_pnl / risk, 3)
+
+
+def _entry_candle_at(row: PaperTrade) -> datetime | None:
+    raw_value = ((row.context or {}).get("market_context") or {}).get("last_candle_at")
+    if not raw_value:
+        return None
+    try:
+        return datetime.fromisoformat(str(raw_value).replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+        return None
+
+
+def _open_paper_trade_query(db: Session, symbols: list[str] | None = None, timeframe: str | None = None):
+    closed_statuses = {"cancelled", "closed", "exited", "stopped", "target_hit"}
+    query = db.query(PaperTrade).filter(PaperTrade.closed_at.is_(None))
+    query = query.filter(~PaperTrade.status.in_(closed_statuses))
+    if symbols:
+        query = query.filter(PaperTrade.symbol.in_([item.upper() for item in symbols]))
+    if timeframe:
+        query = query.filter(PaperTrade.timeframe == timeframe.lower())
+    return query.order_by(PaperTrade.created_at.asc())
+
+
+def _exit_from_candle(row: PaperTrade, candle: MarketCandle) -> tuple[str, float, str] | None:
+    if row.side == "buy":
+        stop_hit = row.stop_loss is not None and candle.low <= row.stop_loss
+        target_hit = row.target is not None and candle.high >= row.target
+        if stop_hit:
+            return "stopped", float(row.stop_loss), f"Auto paper reconciliation: stop hit on {candle.ts.isoformat()}"
+        if target_hit:
+            return "target_hit", float(row.target), f"Auto paper reconciliation: target hit on {candle.ts.isoformat()}"
+    if row.side == "sell":
+        stop_hit = row.stop_loss is not None and candle.high >= row.stop_loss
+        target_hit = row.target is not None and candle.low <= row.target
+        if stop_hit:
+            return "stopped", float(row.stop_loss), f"Auto paper reconciliation: stop hit on {candle.ts.isoformat()}"
+        if target_hit:
+            return "target_hit", float(row.target), f"Auto paper reconciliation: target hit on {candle.ts.isoformat()}"
+    return None
+
+
+def reconcile_open_paper_trades(
+    db: Session,
+    symbols: list[str] | None = None,
+    timeframe: str | None = None,
+    limit: int = 200,
+) -> dict:
+    safe_limit = max(1, min(limit, 500))
+    rows = _open_paper_trade_query(db, symbols=symbols, timeframe=timeframe).limit(safe_limit).all()
+    reconciled = []
+    skipped = []
+
+    for row in rows:
+        entry_candle_at = _entry_candle_at(row)
+        if not entry_candle_at:
+            skipped.append({"id": row.id, "symbol": row.symbol, "reason": "missing entry candle timestamp"})
+            continue
+        candles = (
+            db.query(MarketCandle)
+            .filter(
+                MarketCandle.symbol == row.symbol,
+                MarketCandle.timeframe == row.timeframe,
+                MarketCandle.ts > entry_candle_at,
+            )
+            .order_by(MarketCandle.ts.asc())
+            .limit(500)
+            .all()
+        )
+        if not candles:
+            skipped.append({"id": row.id, "symbol": row.symbol, "reason": "no later candles"})
+            continue
+
+        for candle in candles:
+            exit_result = _exit_from_candle(row, candle)
+            if not exit_result:
+                continue
+            status, exit_price, exit_reason = exit_result
+            row.status = status
+            row.exit_price = exit_price
+            row.exit_reason = exit_reason
+            row.closed_at = candle.ts
+            row.realized_pnl = _realized_pnl(row, exit_price)
+            row.r_multiple = _r_multiple(row, row.realized_pnl)
+            reconciled.append(serialize_paper_trade(row))
+            break
+        else:
+            skipped.append({"id": row.id, "symbol": row.symbol, "reason": "target/stop not reached"})
+
+    db.commit()
+    return {
+        "checked": len(rows),
+        "closed": len(reconciled),
+        "skipped": len(skipped),
+        "items": reconciled,
+        "skipped_items": skipped[:50],
+    }
 
 
 def update_paper_trade_status(db: Session, trade_id: int, payload) -> PaperTrade | None:

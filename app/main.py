@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, TelegramLiveIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeReconcileRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, TelegramLiveIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.angelone_market_data import angelone_status
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
@@ -15,7 +15,7 @@ from app.services.knowledge_extraction import extraction_status, process_pending
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
 from app.services.market_provider import ingest_configured_market_sources, ingest_market_source, market_provider_status
 from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
-from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
+from app.services.paper_trading import create_paper_trade, list_paper_trades, reconcile_open_paper_trades, update_paper_trade_status
 from app.services.paper_validation import create_paper_trade_validation
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.readiness import build_readiness_report
@@ -284,6 +284,19 @@ def update_trade(trade_id: int, payload: PaperTradeStatusUpdate, db: Session = D
         raise HTTPException(status_code=404, detail="Paper trade not found")
     audit(db, "paper.trade_update", f"Paper trade {trade_id} -> {row.status}", entity_type="paper_trade", entity_id=str(row.id), payload={"exit_price": row.exit_price, "realized_pnl": row.realized_pnl, "r_multiple": row.r_multiple})
     return row
+
+
+@app.post("/paper/trades/reconcile")
+def reconcile_trades(payload: PaperTradeReconcileRequest | None = None, db: Session = Depends(get_db)):
+    payload = payload or PaperTradeReconcileRequest()
+    result = reconcile_open_paper_trades(
+        db,
+        symbols=payload.symbols,
+        timeframe=payload.timeframe,
+        limit=payload.limit,
+    )
+    audit(db, "paper.trade_reconcile", "Reconciled open paper trades against stored candles", payload=result)
+    return result
 
 
 @app.get("/paper/scheduler")

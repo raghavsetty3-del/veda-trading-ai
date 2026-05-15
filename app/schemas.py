@@ -79,6 +79,12 @@ class PaperTradeStatusUpdate(BaseModel):
     closed_at: datetime | None = None
 
 
+class PaperTradeReconcileRequest(BaseModel):
+    symbols: list[str] | None = None
+    timeframe: str | None = None
+    limit: int = 200
+
+
 class PaperSchedulerRunRequest(BaseModel):
     symbols: list[str] | None = None
     timeframe: str | None = None

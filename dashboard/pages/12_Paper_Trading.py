@@ -98,6 +98,18 @@ if scheduler:
         if result:
             st.json(result)
 
+    if st.button("Reconcile Open Trades"):
+        result = post(
+            "/paper/trades/reconcile",
+            {
+                "symbols": [symbol],
+                "timeframe": timeframe,
+                "limit": 200,
+            },
+        )
+        if result:
+            st.json(result)
+
 st.subheader("Save Paper Evidence")
 validation_rule_code = st.text_input("Evidence Rule Code", value="")
 validation_status = st.selectbox("Evidence Status Filter", ["", "planned", "open", "closed", "cancelled"], index=0)
