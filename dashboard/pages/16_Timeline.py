@@ -20,6 +20,7 @@ def get(path, params=None):
 
 
 health = get("/health") or {}
+readiness = get("/readiness") or {}
 system_state = get("/system/state") or {}
 validations = get("/validation") or []
 recent_audit = get("/audit", {"limit": 20}) or []
@@ -29,7 +30,7 @@ cols[0].metric("API", health.get("status", "unknown"))
 cols[1].metric("Kill Switch", str(health.get("kill_switch", "unknown")))
 cols[2].metric("Validation Cases", len(validations))
 restore_ok = any(item.get("event_type") == "ops.restore_drill" and item.get("severity") == "INFO" for item in recent_audit)
-cols[3].metric("Restore Drill", "seen" if restore_ok else "check logs")
+cols[3].metric("Live Review", "ready" if readiness.get("ready_for_live_review") else "not ready")
 
 timeline = [
     {
@@ -101,16 +102,17 @@ st.dataframe(pd.DataFrame(timeline), use_container_width=True, hide_index=True)
 
 st.subheader("Live Readiness Gates")
 gates = [
-    {"Gate": "20+ closed paper trades per instrument", "Status": "pending"},
-    {"Gate": "Positive net realized P&L in review window", "Status": "pending"},
-    {"Gate": "Positive average R-multiple", "Status": "pending"},
-    {"Gate": "Provider-backed replay agrees with rule behavior", "Status": "partial"},
-    {"Gate": "Daily offsite backups are healthy", "Status": "active"},
-    {"Gate": "Weekly restore drill is healthy", "Status": "active" if restore_ok else "check logs"},
-    {"Gate": "Kill switch tested and available", "Status": "active"},
-    {"Gate": "User explicitly approves paper-to-live move", "Status": "pending"},
+    {"Gate": item.get("gate"), "Ready": item.get("ready"), "Detail": item.get("detail")}
+    for item in readiness.get("gates", [])
 ]
 st.dataframe(pd.DataFrame(gates), use_container_width=True, hide_index=True)
+
+st.subheader("Missing Inputs")
+missing_inputs = readiness.get("missing_inputs", [])
+if missing_inputs:
+    st.dataframe(pd.DataFrame({"Missing": missing_inputs}), use_container_width=True, hide_index=True)
+else:
+    st.success("No missing external inputs reported.")
 
 st.subheader("Recent Evidence")
 if validations:
@@ -129,3 +131,6 @@ else:
 
 with st.expander("System State"):
     st.json(system_state)
+
+with st.expander("Readiness JSON"):
+    st.json(readiness)

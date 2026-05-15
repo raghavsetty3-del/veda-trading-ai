@@ -16,6 +16,7 @@ from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_p
 from app.services.paper_trading import create_paper_trade, list_paper_trades, update_paper_trade_status
 from app.services.paper_validation import create_paper_trade_validation
 from app.services.recovery import get_kill_switch, set_kill_switch
+from app.services.readiness import build_readiness_report
 from app.services.rule_evidence import build_rule_activation_evidence
 from app.services.rule_lifecycle import set_rule_activation
 from app.services.rules import evaluate_rule, evaluate_setup
@@ -62,6 +63,11 @@ def startup():
 @app.get("/health")
 def health(db: Session = Depends(get_db)):
     return {"status": "ok", "version": "0.2.0", "kill_switch": get_kill_switch(db)}
+
+
+@app.get("/readiness")
+def readiness(db: Session = Depends(get_db)):
+    return build_readiness_report(db)
 
 
 @app.get("/principles")
