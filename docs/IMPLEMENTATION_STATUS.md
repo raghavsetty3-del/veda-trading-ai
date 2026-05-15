@@ -28,7 +28,7 @@ Date: 2026-05-15
 - Rule evaluator API and dashboard workbench added.
 - Setup evaluator API and dashboard page added.
 - Scenario lab API and dashboard page added.
-- Five NIFTY/BANKNIFTY scenario validations are passing.
+- Seven NIFTY/BANKNIFTY scenario validations are passing.
 - Live trading remains disabled by default with kill switch controls.
 - Offsite PostgreSQL backup script and operating notes are present.
 - Market data candle storage and manual ingestion skeleton are present.
@@ -42,14 +42,14 @@ Date: 2026-05-15
 - Scheduled paper-trading evaluation is present and skips duplicate latest candles.
 - Paper trades can record exits, realized P&L, and R-multiple.
 - Open paper trades can be reconciled automatically against later stored candles for target/stop exits.
-- Paper scheduler has created provider-backed open paper trades for both NIFTY and BANKNIFTY.
+- Paper scheduler is active and now waits for strict JustNifty-aligned LRHR setups before opening new trades.
 - Paper-trading observations and closed-trade P&L can now create validation evidence cases.
 - Strategy trade-export CSVs can now create performance validation evidence cases.
 - Failed trade-export evidence can be reviewed as not promoted while preserving the failed result.
 - Backtest/replay evaluator and stored-candle replay are present.
 - Stored-candle replay can now create validation evidence cases.
-- Dhan-backed stored-candle replay validation is passing for RULE-RETRACEMENT-LRHR on both NIFTY and BANKNIFTY.
-- Setup scoring was retuned to match the JustNifty extraction: directional bias now requires aligned price action structure plus 200 EMA bias.
+- Dhan-backed stored-candle replay validation is passing for the tuned RULE-RETRACEMENT-LRHR band on both NIFTY and BANKNIFTY.
+- Setup scoring was retuned to match the JustNifty extraction: directional bias now requires aligned price action structure, 200 EMA bias, LRHR retracement, and higher-timeframe direction.
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
 - Telegram export ingestion, credential readiness status, and live Telethon ingestion endpoint are present.
 - Local deterministic knowledge extraction workbench is present.

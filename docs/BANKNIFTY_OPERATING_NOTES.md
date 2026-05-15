@@ -22,6 +22,7 @@ BankNifty uses the same Veda/JustNifty framework as Nifty, but it needs a separa
 
 - For conservative intraday trades, use the 5-minute 200 EMA as the major bias filter.
 - Treat 1-minute structure as execution detail, not the main decision source.
+- Treat the 38.2 to 78.6 retracement zone as the automated LRHR band; avoid shallow chase entries even when structure and EMA bias agree.
 - If BankNifty is above 200 EMA but ADX is below its profile threshold, Veda should wait.
 - If price is extended but still inside the BankNifty threshold, Veda may continue evaluating the setup rather than blocking solely due to extension.
 - If price is at a channel or envelope extreme, prefer part booking or waiting for a pullback rather than fresh chase entries.

@@ -16,9 +16,9 @@ Completed as of 2026-05-15:
 - The failed BankNifty trade export has been reviewed as not promoted; the failed result is retained.
 - DhanHQ is configured for NIFTY and BANKNIFTY 5-minute provider-backed candles.
 - More than 2,900 provider-backed candles per instrument are loaded.
-- Dhan-backed stored-candle replay validation passes for RULE-RETRACEMENT-LRHR on NIFTY and BANKNIFTY.
-- Author-aligned tuning now requires price action structure plus 200 EMA bias before long/short bias.
-- Provider-backed open paper trades now exist for both NIFTY and BANKNIFTY and will reconcile against later candles.
+- Dhan-backed stored-candle replay validation passes for the tuned RULE-RETRACEMENT-LRHR band on NIFTY and BANKNIFTY.
+- Author-aligned tuning now requires price action structure, 200 EMA bias, LRHR retracement, and higher-timeframe direction before long/short bias.
+- Previous provider-backed open paper trades were cancelled because their retracement was too shallow under the tuned LRHR band.
 - Healthwatch, daily offsite backups, and weekly restore drills are active.
 - Live trading remains disabled.
 
@@ -55,6 +55,6 @@ The dashboard `Timeline` page and API endpoint `/readiness` show the current gat
 ## Best Next Actions
 
 1. Let paper trading run for at least five trading sessions before reviewing live readiness.
-2. Watch NIFTY and BANKNIFTY open paper trades until target or stop exits are reconciled.
+2. Let the scheduler wait for new NIFTY and BANKNIFTY LRHR setups, then reconcile target or stop exits.
 3. Provide or choose an external alert receiver URL for `.healthwatch.env`.
 4. Return to Telegram setup after the my.telegram.org rate limit clears.

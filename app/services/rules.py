@@ -37,6 +37,7 @@ def evaluate_setup(market_context: dict, rule_results: list[dict]) -> dict:
     has_short_ema_bias = "RULE-SHORT-EMA-BIAS" in matched
     has_lrhr_retracement = "RULE-RETRACEMENT-LRHR" in matched
     has_known_mtf_context = "RULE-MTF-CONTEXT-REQUIRED" in matched
+    higher_timeframe_bias = str(market_context.get("higher_timeframe_bias") or "unknown").lower()
 
     if has_bullish_structure:
         long_score += 2
@@ -71,9 +72,26 @@ def evaluate_setup(market_context: dict, rule_results: list[dict]) -> dict:
         risk_flags.append("Emotional/revenge-trading state blocks new trades.")
     if "RULE-PART-BOOK-AT-EXTREME" in matched:
         risk_flags.append("Price is at an extreme; prefer part booking or avoid fresh chase entries.")
+    if (has_bullish_structure and has_long_ema_bias) or (has_bearish_structure and has_short_ema_bias):
+        if not has_lrhr_retracement:
+            risk_flags.append("Price is outside the LRHR retracement zone; wait for a cleaner pullback.")
+    if has_bullish_structure and has_long_ema_bias and higher_timeframe_bias != "bullish":
+        risk_flags.append("Higher timeframe bias is not aligned for a long setup.")
+    if has_bearish_structure and has_short_ema_bias and higher_timeframe_bias != "bearish":
+        risk_flags.append("Higher timeframe bias is not aligned for a short setup.")
 
-    long_has_primary_confluence = has_bullish_structure and has_long_ema_bias
-    short_has_primary_confluence = has_bearish_structure and has_short_ema_bias
+    long_has_primary_confluence = (
+        has_bullish_structure
+        and has_long_ema_bias
+        and has_lrhr_retracement
+        and higher_timeframe_bias == "bullish"
+    )
+    short_has_primary_confluence = (
+        has_bearish_structure
+        and has_short_ema_bias
+        and has_lrhr_retracement
+        and higher_timeframe_bias == "bearish"
+    )
 
     if risk_flags:
         stance = "wait"

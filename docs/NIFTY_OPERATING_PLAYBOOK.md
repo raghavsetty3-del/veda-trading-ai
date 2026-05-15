@@ -55,10 +55,13 @@ Preferred fields:
 - `neutral_wait`: context is incomplete or mixed; observe.
 - `wait`: risk flags are active; avoid fresh discretionary trades.
 
+In the automated paper-trading path, `long_bias` and `short_bias` are treated as tradable setup signals only when price action structure, 200 EMA direction, LRHR retracement, and higher-timeframe direction are aligned. LRHR retracement is implemented as the 38.2 to 78.6 zone; shallower pullbacks are treated as chase risk.
+
 ## Fresh Entry Checklist
 
 - Price action supports direction.
 - 200 EMA supports direction.
+- Retracement is in the 38.2 to 78.6 LRHR zone.
 - Entry is near retracement, EMA, trendline, channel, or support/resistance confluence.
 - Price is not too extended from the relevant EMA.
 - Higher timeframe context is known.
@@ -75,6 +78,7 @@ Preferred fields:
 ## No-Trade Conditions
 
 - Low ADX/choppy regime.
+- Pullback is too shallow or too deep for the LRHR zone.
 - Price far away from the relevant EMA after expansion.
 - Revenge trading or repeated plan violation.
 - Conflicting structure across timeframes.

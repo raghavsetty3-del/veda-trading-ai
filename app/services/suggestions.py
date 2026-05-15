@@ -13,7 +13,7 @@ SUGGESTION_RULES = [
         "draft_rule_code": "DRAFT-RETRACEMENT-LRHR",
         "rule_name": "Prefer LRHR retracement before entry",
         "expected_behavior": "Prefer entries after a pullback into an acceptable retracement zone instead of chasing expansion.",
-        "logic_json": {"conditions": [{"field": "retracement_pct", "op": "<=", "value": 61.8}]},
+        "logic_json": {"conditions": [{"field": "retracement_pct", "op": ">=", "value": 38.2}, {"field": "retracement_pct", "op": "<=", "value": 78.6}]},
     },
     {
         "key": "avoid_chasing",
