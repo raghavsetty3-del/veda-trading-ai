@@ -19,7 +19,7 @@ def _paper_metrics(db: Session, symbol: str) -> dict:
         .limit(500)
         .all()
     )
-    closed = [row for row in rows if row.closed_at is not None or row.realized_pnl is not None]
+    closed = [row for row in rows if row.realized_pnl is not None]
     pnl_values = [row.realized_pnl for row in closed if row.realized_pnl is not None]
     r_values = [row.r_multiple for row in closed if row.r_multiple is not None]
     wins = [value for value in pnl_values if value > 0]

@@ -48,6 +48,7 @@ def _trade_summary(rows: list[PaperTrade], rule_code: str | None) -> dict:
     rule_matches = 0
     rule_failures = 0
     closed_rows = []
+    finalized_without_pnl = 0
     pnl_values = []
     r_values = []
 
@@ -60,10 +61,11 @@ def _trade_summary(rows: list[PaperTrade], rule_code: str | None) -> dict:
             rule_matches += 1
         if failed:
             rule_failures += 1
-        if row.closed_at is not None or row.realized_pnl is not None:
-            closed_rows.append(row)
         if row.realized_pnl is not None:
+            closed_rows.append(row)
             pnl_values.append(row.realized_pnl)
+        elif row.closed_at is not None:
+            finalized_without_pnl += 1
         if row.r_multiple is not None:
             r_values.append(row.r_multiple)
         observations.append({
@@ -90,6 +92,7 @@ def _trade_summary(rows: list[PaperTrade], rule_code: str | None) -> dict:
         "total_trades": len(rows),
         "closed_trades": len(closed_rows),
         "closed_with_pnl": len(pnl_values),
+        "finalized_without_pnl": finalized_without_pnl,
         "winning_closed_trades": len(winning_closed),
         "losing_closed_trades": len(losing_closed),
         "closed_win_rate": round(len(winning_closed) / len(pnl_values), 4) if pnl_values else None,
