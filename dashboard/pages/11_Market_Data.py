@@ -114,7 +114,11 @@ if submitted:
         st.json(result)
 
 st.subheader("CSV Candle Import")
-csv_source = st.text_input("CSV Source", value="csv-upload")
+csv_source = st.text_input(
+    "CSV Source",
+    value=f"manual-csv-upload:{symbol}:{timeframe}",
+    help="Use a provider:... label for real provider data. Manual, smoke, test, demo, and sample labels are excluded from live readiness.",
+)
 uploaded = st.file_uploader("CSV file", type=["csv"])
 if uploaded is not None:
     df = pd.read_csv(uploaded)
@@ -126,6 +130,9 @@ if uploaded is not None:
     elif st.button("Import CSV Candles"):
         rows = []
         for _, row in df.iterrows():
+            source_value = row.get("source", csv_source)
+            if pd.isna(source_value):
+                source_value = csv_source
             rows.append({
                 "symbol": str(row.get("symbol", symbol)).upper(),
                 "timeframe": str(row.get("timeframe", timeframe)).lower(),
@@ -135,7 +142,7 @@ if uploaded is not None:
                 "low": float(row["low"]),
                 "close": float(row["close"]),
                 "volume": None if pd.isna(row.get("volume")) else float(row.get("volume", 0)),
-                "source": str(row.get("source", csv_source)),
+                "source": str(source_value),
             })
         result = post("/market/candles/bulk", {"candles": rows})
         if result:
