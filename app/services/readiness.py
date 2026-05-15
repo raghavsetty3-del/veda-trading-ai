@@ -1,5 +1,6 @@
 import os
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import settings
@@ -34,6 +35,29 @@ def _paper_metrics(db: Session, symbol: str) -> dict:
 
 def _candle_count(db: Session, symbol: str) -> int:
     return db.query(MarketCandle).filter(MarketCandle.symbol == symbol.upper()).count()
+
+
+def _provider_candle_count(db: Session, symbol: str) -> int:
+    blocked_source_markers = ["manual", "smoke", "test", "demo", "sample"]
+    query = db.query(MarketCandle).filter(MarketCandle.symbol == symbol.upper())
+    for marker in blocked_source_markers:
+        query = query.filter(~MarketCandle.source.ilike(f"%{marker}%"))
+    return query.count()
+
+
+def _non_production_source_counts(db: Session) -> dict:
+    blocked_source_markers = ["manual", "smoke", "test", "demo", "sample"]
+    counts: dict[str, int] = {}
+    rows = (
+        db.query(MarketCandle.symbol, MarketCandle.timeframe, MarketCandle.source, func.count(MarketCandle.id))
+        .group_by(MarketCandle.symbol, MarketCandle.timeframe, MarketCandle.source)
+        .all()
+    )
+    for symbol, timeframe, source, count in rows:
+        source = source or "unknown"
+        if any(marker in source.lower() for marker in blocked_source_markers):
+            counts[f"{symbol}:{timeframe}:{source}"] = count
+    return counts
 
 
 def _latest_successful_audit(db: Session, event_type: str) -> dict | None:
@@ -76,6 +100,8 @@ def build_readiness_report(db: Session) -> dict:
     symbols = ["NIFTY", "BANKNIFTY"]
     paper = [_paper_metrics(db, symbol) for symbol in symbols]
     candle_counts = {symbol: _candle_count(db, symbol) for symbol in symbols}
+    provider_candle_counts = {symbol: _provider_candle_count(db, symbol) for symbol in symbols}
+    non_production_source_counts = _non_production_source_counts(db)
     restore_drill = _latest_successful_audit(db, "ops.restore_drill")
     offsite_backup = _latest_successful_audit(db, "ops.offsite_backup")
     kill_switch = get_kill_switch(db)
@@ -93,8 +119,8 @@ def build_readiness_report(db: Session) -> dict:
         },
         {
             "gate": "historical_candles_loaded",
-            "ready": all(candle_counts[symbol] >= 100 for symbol in symbols),
-            "detail": f"Candle counts: {candle_counts}",
+            "ready": all(provider_candle_counts[symbol] >= 100 for symbol in symbols),
+            "detail": f"Provider-backed candle counts: {provider_candle_counts}; total counts: {candle_counts}",
         },
         {
             "gate": "closed_paper_trades_ready",
@@ -163,6 +189,8 @@ def build_readiness_report(db: Session) -> dict:
         "validation": validation,
         "paper": paper,
         "candle_counts": candle_counts,
+        "provider_candle_counts": provider_candle_counts,
+        "non_production_source_counts": non_production_source_counts,
         "restore_drill": restore_drill,
         "offsite_backup": offsite_backup,
     }

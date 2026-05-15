@@ -38,7 +38,7 @@ timeline = [
         "Target": "2026-05-15",
         "Estimate": "10 min",
         "Owner": "User",
-        "Status": "Blocked by SSH passphrase in laptop shell",
+        "Status": "Current commits pushed",
     },
     {
         "Phase": "Real market data provider",
@@ -52,7 +52,7 @@ timeline = [
         "Target": "2026-05-16 to 2026-05-17",
         "Estimate": "0.5-1 day after files/source",
         "Owner": "Shared",
-        "Status": "Waiting for OHLC data source",
+        "Status": "Waiting for provider-backed OHLC data",
     },
     {
         "Phase": "Paper-trade evidence run",
@@ -106,6 +106,36 @@ gates = [
     for item in readiness.get("gates", [])
 ]
 st.dataframe(pd.DataFrame(gates), use_container_width=True, hide_index=True)
+
+provider_candle_counts = readiness.get("provider_candle_counts", {})
+total_candle_counts = readiness.get("candle_counts", {})
+if provider_candle_counts or total_candle_counts:
+    st.subheader("Candle Evidence")
+    symbols = sorted(set(provider_candle_counts) | set(total_candle_counts))
+    st.dataframe(
+        pd.DataFrame([
+            {
+                "Symbol": symbol,
+                "Provider-backed": provider_candle_counts.get(symbol, 0),
+                "Total": total_candle_counts.get(symbol, 0),
+            }
+            for symbol in symbols
+        ]),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+non_production = readiness.get("non_production_source_counts", {})
+if non_production:
+    with st.expander("Non-production candle sources"):
+        st.dataframe(
+            pd.DataFrame([
+                {"Source": source, "Candles": candles}
+                for source, candles in sorted(non_production.items())
+            ]),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 st.subheader("Missing Inputs")
 missing_inputs = readiness.get("missing_inputs", [])

@@ -54,3 +54,16 @@ The scheduler runs configured provider ingestion on the configured interval, and
 - market snapshots;
 - stored-candle replay;
 - scheduled paper-trading evaluation.
+
+## Live-Readiness Evidence
+
+The `/readiness` report shows both total candle counts and provider-backed candle counts. Live-readiness uses provider-backed counts only.
+
+Sources whose labels contain `manual`, `smoke`, `test`, `demo`, or `sample` are treated as non-production evidence. They remain useful for deployment checks, but they do not satisfy the historical candle gate.
+
+Use source labels that identify the real provider, for example:
+
+```text
+provider:zerodha:NIFTY:5m
+provider:csv-vendor:BANKNIFTY:5m
+```

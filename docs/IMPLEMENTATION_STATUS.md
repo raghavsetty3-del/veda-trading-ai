@@ -50,10 +50,10 @@ Date: 2026-05-14
 - Draft rule activation/deactivation workflow with validation notes is present.
 - Draft rule activation now checks automated scenario evidence and blocks incomplete activations.
 - Timeline and live-readiness gates are documented and visible in the dashboard.
+- Historical candle readiness now distinguishes provider-backed candles from smoke/manual/demo data.
 
 ## Pending
 
-- Push the latest local commits to GitHub from the laptop session that can enter the SSH key passphrase.
 - Configure real market-data provider CSV/HTTP sources or broker credentials.
 - Review paper-trade exit outcomes before enabling any live execution.
 - Configure production blog RSS feeds and live Telegram listener credentials.

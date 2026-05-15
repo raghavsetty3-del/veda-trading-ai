@@ -20,7 +20,7 @@ Completed as of 2026-05-15:
 
 | Phase | Target Date | Estimate | Owner | Status |
 | --- | --- | --- | --- | --- |
-| GitHub sync | 2026-05-15 | 10 minutes | User | Blocked by SSH passphrase in interactive laptop shell |
+| GitHub sync | 2026-05-15 | 10 minutes | User | Current commits pushed |
 | Real market data provider | 2026-05-15 to 2026-05-16 | 0.5-1 day after URL/API credentials | Shared | Waiting for provider details |
 | Historical NIFTY/BANKNIFTY candles | 2026-05-16 to 2026-05-17 | 0.5-1 day after files/source | Shared | Waiting for OHLC data source |
 | Paper-trade evidence run | 2026-05-18 to 2026-05-24 | 5 trading sessions minimum | System | Needs live/provider candles |
@@ -35,6 +35,7 @@ Completed as of 2026-05-15:
 Do not enable live execution until all gates are reviewed:
 
 - At least 20 closed paper trades per instrument being considered.
+- At least 100 provider-backed historical candles per instrument; smoke/manual/demo data is excluded.
 - Net realized P&L is positive for the review window.
 - Average R-multiple is positive.
 - No single failed strategy export is being promoted as production evidence.
