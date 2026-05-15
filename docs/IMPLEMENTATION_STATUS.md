@@ -34,6 +34,7 @@ Date: 2026-05-14
 - Market data candle storage and manual ingestion skeleton are present.
 - Bulk CSV candle import is present.
 - Provider-style CSV/HTTP market-data ingestion is present and schedulable.
+- Angel One SmartAPI historical candle ingestion is present through `angelone://` provider sources.
 - Paper-trading simulation endpoints and dashboard page are present.
 - Scheduled paper-trading evaluation is present and skips duplicate latest candles.
 - Paper trades can record exits, realized P&L, and R-multiple.
@@ -54,7 +55,7 @@ Date: 2026-05-14
 
 ## Pending
 
-- Configure real market-data provider CSV/HTTP sources or broker credentials.
+- Configure real market-data provider CSV/HTTP sources or Angel One broker credentials.
 - Review paper-trade exit outcomes before enabling any live execution.
 - Configure production blog RSS feeds and live Telegram listener credentials.
 - Configure OpenAI extraction credentials if AI enrichment should run in production.

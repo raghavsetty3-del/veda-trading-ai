@@ -6,6 +6,7 @@ from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
 from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, TelegramLiveIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
+from app.services.angelone_market_data import angelone_status
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
@@ -237,6 +238,11 @@ def create_market_snapshot(payload: MarketSnapshotRequest, db: Session = Depends
 @app.get("/market/provider/status")
 def get_market_provider_status():
     return market_provider_status()
+
+
+@app.get("/market/angelone/status")
+def get_angelone_market_status():
+    return angelone_status()
 
 
 @app.post("/market/provider/ingest")

@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     market_data_ingest_limit: int = 5000
     market_data_ingest_on_start: bool = False
 
+    angelone_api_key: str | None = None
+    angelone_client_code: str | None = None
+    angelone_pin: str | None = None
+    angelone_totp_secret: str | None = None
+    angelone_client_local_ip: str = "127.0.0.1"
+    angelone_client_public_ip: str = "127.0.0.1"
+    angelone_client_mac: str = "00:00:00:00:00:00"
+    angelone_history_days: int = 5
+
     telegram_api_id: str | None = None
     telegram_api_hash: str | None = None
     telegram_bot_token: str | None = None

@@ -60,6 +60,8 @@ if provider_status:
     cols[3].metric("Limit", provider_status.get("limit"))
     with st.expander("Configured sources"):
         st.json(provider_status.get("sources", []))
+    with st.expander("Angel One SmartAPI"):
+        st.json(provider_status.get("angelone", {}))
     if st.button("Run Configured Provider Ingestion"):
         result = post("/market/provider/ingest-configured")
         if result:

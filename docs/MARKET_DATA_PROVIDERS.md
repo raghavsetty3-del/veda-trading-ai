@@ -1,6 +1,6 @@
 # Market Data Providers
 
-Veda can ingest candle CSV from an HTTP URL, `file://` URL, or local VM path. This is the provider bridge until a broker/vendor-specific connector is configured.
+Veda can ingest candle CSV from an HTTP URL, `file://` URL, local VM path, or Angel One SmartAPI `angelone://` source.
 
 ## CSV Format
 
@@ -42,6 +42,14 @@ MARKET_DATA_INGEST_INTERVAL_SECONDS=900
 MARKET_DATA_INGEST_LIMIT=5000
 MARKET_DATA_INGEST_ON_START=false
 ```
+
+Angel One SmartAPI sources use this format:
+
+```text
+MARKET_DATA_SOURCES=NIFTY|5m|angelone://NSE/99926000;BANKNIFTY|5m|angelone://NSE/99926009
+```
+
+See `docs/ANGELONE_MARKET_DATA.md` for credentials and operational notes.
 
 Then run manually:
 
