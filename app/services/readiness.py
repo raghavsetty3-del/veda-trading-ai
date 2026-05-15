@@ -161,31 +161,37 @@ def build_readiness_report(db: Session) -> dict:
     gates = [
         {
             "gate": "live_trading_disabled",
+            "required": True,
             "ready": not settings.enable_live_trading and not kill_switch,
             "detail": "Live trading env flag is disabled and kill switch is off.",
         },
         {
             "gate": "market_data_provider_configured",
+            "required": True,
             "ready": market_status["configured"],
             "detail": f"{market_status['source_count']} configured provider sources.",
         },
         {
             "gate": "historical_candles_loaded",
+            "required": True,
             "ready": all(provider_candle_counts[symbol] >= 100 for symbol in symbols),
             "detail": f"Provider-backed candle counts: {provider_candle_counts}; total counts: {candle_counts}",
         },
         {
             "gate": "closed_paper_trades_ready",
+            "required": True,
             "ready": all(item["closed_paper_trades"] >= 20 for item in paper),
             "detail": f"Closed paper trades: { {item['symbol']: item['closed_paper_trades'] for item in paper} }",
         },
         {
             "gate": "paper_pnl_positive",
+            "required": True,
             "ready": all(item["net_realized_pnl"] > 0 for item in paper),
             "detail": f"Net realized P&L: { {item['symbol']: item['net_realized_pnl'] for item in paper} }",
         },
         {
             "gate": "failed_trade_exports_reviewed",
+            "required": True,
             "ready": validation["unreviewed_trade_export_failures"] == 0,
             "detail": (
                 f"Unreviewed failed trade-export validations: {validation['unreviewed_trade_export_failures']}; "
@@ -194,56 +200,72 @@ def build_readiness_report(db: Session) -> dict:
         },
         {
             "gate": "restore_drill_seen",
+            "required": True,
             "ready": restore_drill is not None,
             "detail": restore_drill["created_at"] if restore_drill else "No successful restore drill audit event found.",
         },
         {
             "gate": "offsite_backup_seen",
+            "required": True,
             "ready": offsite_backup is not None,
             "detail": offsite_backup["created_at"] if offsite_backup else "No successful offsite backup audit event found.",
         },
         {
             "gate": "external_alert_receiver_configured",
+            "required": False,
             "ready": bool(os.getenv("HEALTHWATCH_WEBHOOK_URL")),
             "detail": "HEALTHWATCH_WEBHOOK_URL visible to API process." if os.getenv("HEALTHWATCH_WEBHOOK_URL") else "Webhook hook exists; receiver URL not configured in API env.",
         },
         {
             "gate": "telegram_configured",
+            "required": False,
             "ready": telegram["configured"],
             "detail": f"Missing: {telegram['missing']}",
         },
         {
             "gate": "openai_extraction_ready",
+            "required": False,
             "ready": extraction["openai_enabled"] and extraction["openai_key_present"],
             "detail": "Optional enrichment only; deterministic extraction is active.",
         },
     ]
 
-    missing_inputs = []
+    missing_required_inputs = []
+    optional_missing_inputs = []
     if not market_status["configured"]:
-        missing_inputs.append("MARKET_DATA_SOURCES or broker/provider credentials")
+        missing_required_inputs.append("MARKET_DATA_SOURCES or broker/provider credentials")
     angelone = market_status.get("angelone", {})
     if angelone.get("source_count") and not angelone.get("configured"):
-        missing_inputs.extend(angelone.get("missing", []))
+        missing_required_inputs.extend(angelone.get("missing", []))
     dhan = market_status.get("dhan", {})
     if dhan.get("source_count") and not dhan.get("configured"):
-        missing_inputs.extend(dhan.get("missing", []))
+        missing_required_inputs.extend(dhan.get("missing", []))
     if not telegram["configured"]:
-        missing_inputs.extend(telegram["missing"])
+        optional_missing_inputs.extend(telegram["missing"])
     if not extraction["openai_key_present"]:
-        missing_inputs.append("OPENAI_API_KEY if AI enrichment is desired")
+        optional_missing_inputs.append("OPENAI_API_KEY if AI enrichment is desired")
     if not os.getenv("HEALTHWATCH_WEBHOOK_URL"):
-        missing_inputs.append("HEALTHWATCH_WEBHOOK_URL if external alerts are desired")
+        optional_missing_inputs.append("HEALTHWATCH_WEBHOOK_URL if external alerts are desired")
     if not settings.blog_feeds:
-        missing_inputs.append("BLOG_FEEDS for production RSS ingestion")
+        optional_missing_inputs.append("BLOG_FEEDS for production RSS ingestion")
 
-    ready_for_live_review = all(gate["ready"] for gate in gates[:7])
+    required_gates = [gate for gate in gates if gate["required"]]
+    advisory_gates = [gate for gate in gates if not gate["required"]]
+    blocking_gates = [gate["gate"] for gate in required_gates if not gate["ready"]]
+    ready_for_live_review = not blocking_gates
+    missing_required_inputs = sorted(set(missing_required_inputs))
+    optional_missing_inputs = sorted(set(optional_missing_inputs))
     return {
         "ready_for_live_review": ready_for_live_review,
         "live_trading_enabled": settings.enable_live_trading,
         "kill_switch": kill_switch,
         "gates": gates,
-        "missing_inputs": sorted(set(missing_inputs)),
+        "required_gates": required_gates,
+        "advisory_gates": advisory_gates,
+        "blocking_gates": blocking_gates,
+        "missing_required_inputs": missing_required_inputs,
+        "optional_missing_inputs": optional_missing_inputs,
+        "missing_inputs": sorted(set(missing_required_inputs + optional_missing_inputs)),
         "market_provider": market_status,
         "telegram": telegram,
         "extraction": extraction,

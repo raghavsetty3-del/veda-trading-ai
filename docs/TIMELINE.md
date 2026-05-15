@@ -50,7 +50,7 @@ Do not enable live execution until all gates are reviewed:
 - Kill switch remains tested and available.
 - User explicitly approves the move from paper to live.
 
-The dashboard `Timeline` page and API endpoint `/readiness` show the current gate status from database and environment signals.
+The dashboard `Timeline` page and API endpoint `/readiness` separate required live-readiness gates from optional advisories such as Telegram, RSS/blog ingestion, OpenAI enrichment, and external alert receiver configuration.
 
 ## Best Next Actions
 

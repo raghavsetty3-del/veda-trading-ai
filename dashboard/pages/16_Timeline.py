@@ -101,11 +101,28 @@ timeline = [
 st.dataframe(pd.DataFrame(timeline), use_container_width=True, hide_index=True)
 
 st.subheader("Live Readiness Gates")
+required_gates = readiness.get("required_gates") or [
+    item for item in readiness.get("gates", []) if item.get("required", True)
+]
 gates = [
     {"Gate": item.get("gate"), "Ready": item.get("ready"), "Detail": item.get("detail")}
-    for item in readiness.get("gates", [])
+    for item in required_gates
 ]
 st.dataframe(pd.DataFrame(gates), use_container_width=True, hide_index=True)
+
+advisory_gates = readiness.get("advisory_gates") or [
+    item for item in readiness.get("gates", []) if item.get("required") is False
+]
+if advisory_gates:
+    st.subheader("Optional Advisories")
+    st.dataframe(
+        pd.DataFrame([
+            {"Advisory": item.get("gate"), "Ready": item.get("ready"), "Detail": item.get("detail")}
+            for item in advisory_gates
+        ]),
+        use_container_width=True,
+        hide_index=True,
+    )
 
 provider_candle_counts = readiness.get("provider_candle_counts", {})
 total_candle_counts = readiness.get("candle_counts", {})
@@ -164,11 +181,19 @@ if non_production:
         )
 
 st.subheader("Missing Inputs")
-missing_inputs = readiness.get("missing_inputs", [])
-if missing_inputs:
-    st.dataframe(pd.DataFrame({"Missing": missing_inputs}), use_container_width=True, hide_index=True)
+missing_required_inputs = readiness.get("missing_required_inputs")
+optional_missing_inputs = readiness.get("optional_missing_inputs")
+if missing_required_inputs is None and optional_missing_inputs is None:
+    missing_required_inputs = readiness.get("missing_inputs", [])
+    optional_missing_inputs = []
+
+if missing_required_inputs:
+    st.dataframe(pd.DataFrame({"Required": missing_required_inputs}), use_container_width=True, hide_index=True)
 else:
-    st.success("No missing external inputs reported.")
+    st.success("No missing required inputs reported.")
+
+if optional_missing_inputs:
+    st.dataframe(pd.DataFrame({"Optional": optional_missing_inputs}), use_container_width=True, hide_index=True)
 
 st.subheader("Recent Evidence")
 if validations:
