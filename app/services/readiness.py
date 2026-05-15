@@ -80,16 +80,34 @@ def _validation_summary(db: Session) -> dict:
     rows = db.query(ValidationCase).order_by(ValidationCase.created_at.desc()).limit(500).all()
     by_status: dict[str, int] = {}
     trade_export_failures = 0
+    reviewed_trade_export_failures = 0
+    unreviewed_trade_export_failures = 0
     for row in rows:
         by_status[row.status] = by_status.get(row.status, 0) + 1
         expected_type = (row.expected_json or {}).get("type")
         if expected_type == "trade_export_performance" and row.status != "pass":
             trade_export_failures += 1
+            if _reviewed_failed_trade_export(row):
+                reviewed_trade_export_failures += 1
+            else:
+                unreviewed_trade_export_failures += 1
     return {
         "total": len(rows),
         "by_status": by_status,
         "trade_export_failures": trade_export_failures,
+        "reviewed_trade_export_failures": reviewed_trade_export_failures,
+        "unreviewed_trade_export_failures": unreviewed_trade_export_failures,
     }
+
+
+def _reviewed_failed_trade_export(row: ValidationCase) -> bool:
+    delivered = row.delivered_json or {}
+    review = delivered.get("trade_export_review") if isinstance(delivered, dict) else None
+    if isinstance(review, dict):
+        disposition = str(review.get("disposition") or "").lower()
+        if review.get("reviewed") is True and disposition in {"not_promoted", "needs_rework", "excluded"}:
+            return True
+    return "[reviewed_trade_export_failure]" in (row.notes or "").lower()
 
 
 def build_readiness_report(db: Session) -> dict:
@@ -134,8 +152,11 @@ def build_readiness_report(db: Session) -> dict:
         },
         {
             "gate": "failed_trade_exports_reviewed",
-            "ready": validation["trade_export_failures"] == 0,
-            "detail": f"Failed trade-export validations: {validation['trade_export_failures']}",
+            "ready": validation["unreviewed_trade_export_failures"] == 0,
+            "detail": (
+                f"Unreviewed failed trade-export validations: {validation['unreviewed_trade_export_failures']}; "
+                f"reviewed failures retained: {validation['reviewed_trade_export_failures']}"
+            ),
         },
         {
             "gate": "restore_drill_seen",

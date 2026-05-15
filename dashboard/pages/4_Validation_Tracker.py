@@ -1,3 +1,4 @@
+from datetime import datetime
 import os, requests, pandas as pd, streamlit as st
 API_BASE = os.getenv("API_BASE", "http://api:8000")
 st.title("Expected vs Delivered Validation")
@@ -7,6 +8,43 @@ if cases:
     st.dataframe(pd.DataFrame(cases), use_container_width=True)
 else:
     st.info("No validation cases yet.")
+
+failed_trade_exports = [
+    item
+    for item in cases
+    if (item.get("expected_json") or {}).get("type") == "trade_export_performance"
+    and item.get("status") != "pass"
+]
+if failed_trade_exports:
+    st.subheader("Review Failed Trade Exports")
+    selected = st.selectbox(
+        "Failed Trade Export",
+        failed_trade_exports,
+        format_func=lambda item: f"{item['id']} - {item['title']}",
+    )
+    review_note = st.text_area(
+        "Review Note",
+        value="Reviewed failed export. Keep status as fail and do not promote this strategy evidence.",
+    )
+    if st.button("Mark Reviewed: Not Promoted"):
+        delivered = dict(selected.get("delivered_json") or {})
+        delivered["trade_export_review"] = {
+            "reviewed": True,
+            "disposition": "not_promoted",
+            "reviewed_at": datetime.utcnow().isoformat() + "Z",
+            "note": review_note,
+        }
+        existing_notes = selected.get("notes") or ""
+        marker = "[reviewed_trade_export_failure]"
+        notes = f"{existing_notes}\n\n{marker} {review_note}".strip()
+        payload = {
+            "delivered_json": delivered,
+            "status": selected.get("status") or "fail",
+            "score": selected.get("score"),
+            "notes": notes,
+        }
+        response = requests.patch(f"{API_BASE}/validation/{selected['id']}", json=payload, timeout=12)
+        st.write(response.json())
 
 st.subheader("Create Validation Case")
 with st.form("validation"):
