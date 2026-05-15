@@ -93,6 +93,8 @@ class PaperTradeValidationRequest(BaseModel):
     rule_code: str | None = None
     limit: int = 100
     expected_min_trades: int = 1
+    expected_min_closed_trades: int = 0
+    expected_min_realized_pnl: float | None = None
     notes: str | None = None
 
 

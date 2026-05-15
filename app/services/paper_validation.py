@@ -47,6 +47,9 @@ def _trade_summary(rows: list[PaperTrade], rule_code: str | None) -> dict:
     observations = []
     rule_matches = 0
     rule_failures = 0
+    closed_rows = []
+    pnl_values = []
+    r_values = []
 
     for row in rows:
         statuses[row.status] = statuses.get(row.status, 0) + 1
@@ -57,6 +60,12 @@ def _trade_summary(rows: list[PaperTrade], rule_code: str | None) -> dict:
             rule_matches += 1
         if failed:
             rule_failures += 1
+        if row.closed_at is not None or row.realized_pnl is not None:
+            closed_rows.append(row)
+        if row.realized_pnl is not None:
+            pnl_values.append(row.realized_pnl)
+        if row.r_multiple is not None:
+            r_values.append(row.r_multiple)
         observations.append({
             "id": row.id,
             "symbol": row.symbol,
@@ -65,13 +74,28 @@ def _trade_summary(rows: list[PaperTrade], rule_code: str | None) -> dict:
             "stance": row.stance,
             "status": row.status,
             "entry_price": row.entry_price,
+            "exit_price": row.exit_price,
+            "closed_at": row.closed_at.isoformat() if row.closed_at else None,
+            "realized_pnl": row.realized_pnl,
+            "r_multiple": row.r_multiple,
             "created_at": row.created_at.isoformat(),
             "matched_rule": matched if rule_code else None,
             "failed_rule": failed if rule_code else None,
         })
 
+    winning_closed = [value for value in pnl_values if value > 0]
+    losing_closed = [value for value in pnl_values if value < 0]
+    net_realized_pnl = round(sum(pnl_values), 2)
     return {
         "total_trades": len(rows),
+        "closed_trades": len(closed_rows),
+        "closed_with_pnl": len(pnl_values),
+        "winning_closed_trades": len(winning_closed),
+        "losing_closed_trades": len(losing_closed),
+        "closed_win_rate": round(len(winning_closed) / len(pnl_values), 4) if pnl_values else None,
+        "net_realized_pnl": net_realized_pnl,
+        "average_realized_pnl": round(net_realized_pnl / len(pnl_values), 2) if pnl_values else None,
+        "average_r_multiple": round(sum(r_values) / len(r_values), 3) if r_values else None,
         "statuses": statuses,
         "stances": stances,
         "sides": sides,
@@ -90,14 +114,27 @@ def create_paper_trade_validation(db: Session, payload) -> dict:
     rows = _query_trades(db, payload)
     summary = _trade_summary(rows, payload.rule_code)
     expected_min_trades = max(1, payload.expected_min_trades)
+    expected_min_closed_trades = max(0, payload.expected_min_closed_trades)
     enough_trades = summary["total_trades"] >= expected_min_trades
+    enough_closed_trades = summary["closed_trades"] >= expected_min_closed_trades
     enough_rule_matches = True
     if payload.rule_code:
         enough_rule_matches = (summary["rule_matches"] or 0) >= expected_min_trades
+    enough_realized_pnl = True
+    if payload.expected_min_realized_pnl is not None:
+        enough_realized_pnl = summary["net_realized_pnl"] >= payload.expected_min_realized_pnl
 
-    status = "pass" if enough_trades and enough_rule_matches and (not payload.rule_code or rule) else "fail"
-    score_base = summary["rule_matches"] if payload.rule_code else summary["total_trades"]
-    score = round(min(1.0, (score_base or 0) / expected_min_trades), 3)
+    status = "pass" if enough_trades and enough_closed_trades and enough_rule_matches and enough_realized_pnl and (not payload.rule_code or rule) else "fail"
+    count_base = summary["rule_matches"] if payload.rule_code else summary["total_trades"]
+    count_score = min(1.0, (count_base or 0) / expected_min_trades)
+    closed_score = min(1.0, summary["closed_trades"] / expected_min_closed_trades) if expected_min_closed_trades else 1.0
+    if payload.expected_min_realized_pnl is None:
+        pnl_score = 1.0
+    elif payload.expected_min_realized_pnl > 0:
+        pnl_score = min(1.0, max(0.0, summary["net_realized_pnl"] / payload.expected_min_realized_pnl))
+    else:
+        pnl_score = 1.0 if summary["net_realized_pnl"] >= payload.expected_min_realized_pnl else 0.0
+    score = round((count_score + closed_score + pnl_score) / 3, 3)
 
     delivered_json = {
         "filters": {
@@ -118,6 +155,8 @@ def create_paper_trade_validation(db: Session, payload) -> dict:
             "type": "paper_trade_review",
             "rule_code": payload.rule_code,
             "expected_min_trades": expected_min_trades,
+            "expected_min_closed_trades": expected_min_closed_trades,
+            "expected_min_realized_pnl": payload.expected_min_realized_pnl,
         },
         delivered_json=delivered_json,
         status=status,

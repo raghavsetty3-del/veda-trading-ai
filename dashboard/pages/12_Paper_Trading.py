@@ -103,6 +103,8 @@ validation_rule_code = st.text_input("Evidence Rule Code", value="")
 validation_status = st.selectbox("Evidence Status Filter", ["", "planned", "open", "closed", "cancelled"], index=0)
 validation_limit = st.number_input("Evidence Trade Limit", min_value=1, max_value=500, value=100, step=10)
 expected_min_trades = st.number_input("Expected Min Evidence Trades", min_value=1, max_value=500, value=1, step=1)
+expected_min_closed_trades = st.number_input("Expected Min Closed Trades", min_value=0, max_value=500, value=0, step=1)
+expected_min_realized_pnl = st.number_input("Expected Min Realized P&L", value=0.0, step=50.0)
 if st.button("Save Paper Trades as Validation"):
     result = post(
         "/validation/from-paper-trades",
@@ -113,6 +115,8 @@ if st.button("Save Paper Trades as Validation"):
             "rule_code": validation_rule_code or None,
             "limit": validation_limit,
             "expected_min_trades": expected_min_trades,
+            "expected_min_closed_trades": expected_min_closed_trades,
+            "expected_min_realized_pnl": expected_min_realized_pnl,
             "notes": "Saved from Paper Trading dashboard.",
         },
     )
