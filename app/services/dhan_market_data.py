@@ -24,6 +24,8 @@ INTRADAY_INTERVALS = {
     "1h": "60",
 }
 
+_TOKEN_CACHE: dict[str, datetime | str] = {}
+
 
 def dhan_status() -> dict:
     generation_missing = []
@@ -63,7 +65,13 @@ def _totp(secret: str) -> str:
     return f"{code % 1_000_000:06d}"
 
 
-def _generate_access_token() -> str:
+def _parse_expiry(value: str | None) -> datetime:
+    if not value:
+        return datetime.now(ZoneInfo("Asia/Kolkata")) + timedelta(hours=23)
+    return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+
+
+def _generate_access_token() -> tuple[str, datetime]:
     if not settings.dhan_client_id or not settings.dhan_pin or not settings.dhan_totp_secret:
         raise RuntimeError("Dhan access token is not configured and token-generation credentials are incomplete.")
 
@@ -78,13 +86,22 @@ def _generate_access_token() -> str:
     token = data.get("accessToken")
     if not token:
         raise RuntimeError(f"Dhan token generation failed: {data}")
-    return token
+    return token, _parse_expiry(data.get("expiryTime"))
 
 
 def _access_token() -> str:
     if settings.dhan_access_token:
         return settings.dhan_access_token
-    return _generate_access_token()
+    cached_token = _TOKEN_CACHE.get("token")
+    cached_expiry = _TOKEN_CACHE.get("expiry")
+    if isinstance(cached_token, str) and isinstance(cached_expiry, datetime):
+        if cached_expiry - datetime.now() > timedelta(minutes=5):
+            return cached_token
+
+    token, expiry = _generate_access_token()
+    _TOKEN_CACHE["token"] = token
+    _TOKEN_CACHE["expiry"] = expiry
+    return token
 
 
 def _default_window(timeframe: str) -> tuple[str, str]:
