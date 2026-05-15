@@ -31,26 +31,32 @@ def evaluate_setup(market_context: dict, rule_results: list[dict]) -> dict:
     short_score = 0
     risk_flags = []
     reasons = []
+    has_bullish_structure = "RULE-BULLISH-PRICE-ACTION" in matched
+    has_bearish_structure = "RULE-BEARISH-PRICE-ACTION" in matched
+    has_long_ema_bias = "RULE-LONG-EMA-BIAS" in matched
+    has_short_ema_bias = "RULE-SHORT-EMA-BIAS" in matched
+    has_lrhr_retracement = "RULE-RETRACEMENT-LRHR" in matched
+    has_known_mtf_context = "RULE-MTF-CONTEXT-REQUIRED" in matched
 
-    if "RULE-BULLISH-PRICE-ACTION" in matched:
+    if has_bullish_structure:
         long_score += 2
         reasons.append("Bullish HH/HL price action is present.")
-    if "RULE-BEARISH-PRICE-ACTION" in matched:
+    if has_bearish_structure:
         short_score += 2
         reasons.append("Bearish LH/LL price action is present.")
 
-    if "RULE-LONG-EMA-BIAS" in matched:
+    if has_long_ema_bias:
         long_score += 2
         reasons.append("Price is above the 200 EMA bias filter.")
-    if "RULE-SHORT-EMA-BIAS" in matched:
+    if has_short_ema_bias:
         short_score += 2
         reasons.append("Price is below the 200 EMA bias filter.")
 
-    if "RULE-RETRACEMENT-LRHR" in matched:
+    if has_lrhr_retracement:
         long_score += 1
         short_score += 1
         reasons.append("Retracement is inside the LRHR threshold.")
-    if "RULE-MTF-CONTEXT-REQUIRED" in matched:
+    if has_known_mtf_context:
         long_score += 1
         short_score += 1
         reasons.append("Higher timeframe context is available.")
@@ -66,11 +72,14 @@ def evaluate_setup(market_context: dict, rule_results: list[dict]) -> dict:
     if "RULE-PART-BOOK-AT-EXTREME" in matched:
         risk_flags.append("Price is at an extreme; prefer part booking or avoid fresh chase entries.")
 
+    long_has_primary_confluence = has_bullish_structure and has_long_ema_bias
+    short_has_primary_confluence = has_bearish_structure and has_short_ema_bias
+
     if risk_flags:
         stance = "wait"
-    elif long_score > short_score and long_score >= 4:
+    elif long_has_primary_confluence and long_score > short_score and long_score >= 4:
         stance = "long_bias"
-    elif short_score > long_score and short_score >= 4:
+    elif short_has_primary_confluence and short_score > long_score and short_score >= 4:
         stance = "short_bias"
     else:
         stance = "neutral_wait"

@@ -1,6 +1,6 @@
 # Implementation Status
 
-Date: 2026-05-14
+Date: 2026-05-15
 
 ## Completed
 
@@ -36,14 +36,20 @@ Date: 2026-05-14
 - Provider-style CSV/HTTP market-data ingestion is present and schedulable.
 - Angel One SmartAPI historical candle ingestion is present through `angelone://` provider sources.
 - DhanHQ historical candle ingestion is present through `dhan://` provider sources.
+- DhanHQ is configured as the active provider for NIFTY and BANKNIFTY 5-minute candles.
+- Provider-backed NIFTY and BANKNIFTY history is loaded from DhanHQ; recurring ingestion is back to the lighter 5-day refresh window.
 - Paper-trading simulation endpoints and dashboard page are present.
 - Scheduled paper-trading evaluation is present and skips duplicate latest candles.
 - Paper trades can record exits, realized P&L, and R-multiple.
 - Open paper trades can be reconciled automatically against later stored candles for target/stop exits.
+- Paper scheduler has created provider-backed open paper trades for both NIFTY and BANKNIFTY.
 - Paper-trading observations and closed-trade P&L can now create validation evidence cases.
 - Strategy trade-export CSVs can now create performance validation evidence cases.
+- Failed trade-export evidence can be reviewed as not promoted while preserving the failed result.
 - Backtest/replay evaluator and stored-candle replay are present.
 - Stored-candle replay can now create validation evidence cases.
+- Dhan-backed stored-candle replay validation is passing for RULE-RETRACEMENT-LRHR on both NIFTY and BANKNIFTY.
+- Setup scoring was retuned to match the JustNifty extraction: directional bias now requires aligned price action structure plus 200 EMA bias.
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
 - Telegram export ingestion, credential readiness status, and live Telethon ingestion endpoint are present.
 - Local deterministic knowledge extraction workbench is present.
@@ -57,11 +63,10 @@ Date: 2026-05-14
 
 ## Pending
 
-- Configure real market-data provider CSV/HTTP sources, Angel One credentials, or DhanHQ credentials.
+- Let provider-backed paper trades accumulate and reconcile until each reviewed instrument has at least 20 realized closed outcomes.
 - Review paper-trade exit outcomes before enabling any live execution.
 - Configure production blog RSS feeds and live Telegram listener credentials.
 - Configure OpenAI extraction credentials if AI enrichment should run in production.
-- Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Monitor weekly restore drill logs and audit events.
 - Configure an external webhook receiver for healthwatch alerts if desired.
