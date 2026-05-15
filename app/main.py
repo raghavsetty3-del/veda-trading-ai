@@ -20,6 +20,7 @@ from app.services.rule_evidence import build_rule_activation_evidence
 from app.services.rule_lifecycle import set_rule_activation
 from app.services.rules import evaluate_rule, evaluate_setup
 from app.services.scenarios import get_scenario, list_scenarios
+from app.services.schema_migrations import ensure_additive_schema
 from app.services.seed import seed_defaults
 from app.services.source_archive import archive_source_document
 from app.services.suggestions import promote_rule_suggestion, rule_suggestions
@@ -30,6 +31,7 @@ from app.ingestion.blog import fetch_blog_page
 from app.ingestion.telegram_listener import telegram_status
 
 Base.metadata.create_all(bind=engine)
+ensure_additive_schema(engine)
 app = FastAPI(title="Veda Trading AI", version="0.2.0")
 
 
@@ -258,10 +260,10 @@ def create_trade(payload: PaperTradeRequest, db: Session = Depends(get_db)):
 
 @app.patch("/paper/trades/{trade_id}")
 def update_trade(trade_id: int, payload: PaperTradeStatusUpdate, db: Session = Depends(get_db)):
-    row = update_paper_trade_status(db, trade_id=trade_id, status=payload.status)
+    row = update_paper_trade_status(db, trade_id=trade_id, payload=payload)
     if not row:
         raise HTTPException(status_code=404, detail="Paper trade not found")
-    audit(db, "paper.trade_update", f"Paper trade {trade_id} -> {row.status}", entity_type="paper_trade", entity_id=str(row.id))
+    audit(db, "paper.trade_update", f"Paper trade {trade_id} -> {row.status}", entity_type="paper_trade", entity_id=str(row.id), payload={"exit_price": row.exit_price, "realized_pnl": row.realized_pnl, "r_multiple": row.r_multiple})
     return row
 
 

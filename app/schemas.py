@@ -74,6 +74,9 @@ class PaperTradeRequest(BaseModel):
 
 class PaperTradeStatusUpdate(BaseModel):
     status: str
+    exit_price: float | None = None
+    exit_reason: str | None = None
+    closed_at: datetime | None = None
 
 
 class PaperSchedulerRunRequest(BaseModel):

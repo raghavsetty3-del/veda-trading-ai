@@ -29,6 +29,16 @@ def post(path, payload):
         return None
 
 
+def patch(path, payload):
+    try:
+        response = requests.patch(f"{API_BASE}{path}", json=payload, timeout=8)
+        response.raise_for_status()
+        return response.json()
+    except Exception as exc:
+        st.error(f"API error: {exc}")
+        return None
+
+
 health = get("/health") or {}
 st.metric("Kill Switch", str(health.get("kill_switch", "unknown")))
 
@@ -108,6 +118,25 @@ if st.button("Save Paper Trades as Validation"):
     )
     if result:
         st.json(result)
+
+st.subheader("Update Paper Trade Exit")
+with st.form("paper_trade_exit"):
+    trade_id = st.number_input("Trade ID", min_value=1, value=1, step=1)
+    exit_status = st.selectbox("Exit Status", ["closed", "target_hit", "stopped", "cancelled"], index=0)
+    exit_price = st.number_input("Exit Price", min_value=0.0, step=1.0)
+    exit_reason = st.text_area("Exit Reason", value="")
+    submitted_exit = st.form_submit_button("Save Exit")
+    if submitted_exit:
+        result = patch(
+            f"/paper/trades/{trade_id}",
+            {
+                "status": exit_status,
+                "exit_price": exit_price,
+                "exit_reason": exit_reason or None,
+            },
+        )
+        if result:
+            st.json(result)
 
 st.subheader("Recent Paper Trades")
 trades = get("/paper/trades", {"limit": 100}) or []

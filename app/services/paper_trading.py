@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.models import PaperTrade, RuleMapping
@@ -23,6 +25,11 @@ def serialize_paper_trade(row: PaperTrade) -> dict:
         "target": row.target,
         "quantity": row.quantity,
         "status": row.status,
+        "exit_price": row.exit_price,
+        "exit_reason": row.exit_reason,
+        "closed_at": row.closed_at.isoformat() if row.closed_at else None,
+        "realized_pnl": row.realized_pnl,
+        "r_multiple": row.r_multiple,
         "reason": row.reason,
         "context": row.context,
         "created_at": row.created_at.isoformat(),
@@ -113,11 +120,38 @@ def create_paper_trade(db: Session, payload) -> dict:
     }
 
 
-def update_paper_trade_status(db: Session, trade_id: int, status: str) -> PaperTrade | None:
+def _realized_pnl(row: PaperTrade, exit_price: float) -> float | None:
+    if row.side == "buy":
+        return round((exit_price - row.entry_price) * row.quantity, 2)
+    if row.side == "sell":
+        return round((row.entry_price - exit_price) * row.quantity, 2)
+    return None
+
+
+def _r_multiple(row: PaperTrade, realized_pnl: float | None) -> float | None:
+    if realized_pnl is None or row.stop_loss is None:
+        return None
+    risk = abs(row.entry_price - row.stop_loss) * row.quantity
+    if risk <= 0:
+        return None
+    return round(realized_pnl / risk, 3)
+
+
+def update_paper_trade_status(db: Session, trade_id: int, payload) -> PaperTrade | None:
     row = db.get(PaperTrade, trade_id)
     if not row:
         return None
-    row.status = status
+    row.status = payload.status
+    if payload.exit_price is not None:
+        row.exit_price = payload.exit_price
+        row.realized_pnl = _realized_pnl(row, payload.exit_price)
+        row.r_multiple = _r_multiple(row, row.realized_pnl)
+    if payload.exit_reason is not None:
+        row.exit_reason = payload.exit_reason
+    if payload.closed_at is not None:
+        row.closed_at = payload.closed_at
+    elif row.status in {"closed", "exited", "stopped", "target_hit", "cancelled"} or payload.exit_price is not None:
+        row.closed_at = datetime.utcnow()
     db.commit()
     db.refresh(row)
     return row
