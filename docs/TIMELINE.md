@@ -19,6 +19,7 @@ Completed as of 2026-05-15:
 - Dhan-backed stored-candle replay validation passes for the tuned RULE-RETRACEMENT-LRHR band on NIFTY and BANKNIFTY using rolling 200-candle windows.
 - Author-aligned tuning now requires price action structure, true EMA200 bias, LRHR retracement, and higher-timeframe direction before long/short bias.
 - Pre-EMA200 open paper trades were cancelled as superseded so new evidence starts from the corrected strategy logic.
+- Historical paper replay showed better 90-day metrics with a 5-candle cooldown, now applied to scheduled paper evaluation.
 - Previous provider-backed open paper trades were cancelled because their retracement was too shallow under the tuned LRHR band.
 - Healthwatch, daily offsite backups, and weekly restore drills are active.
 - Live trading remains disabled.

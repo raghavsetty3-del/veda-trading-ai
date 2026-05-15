@@ -142,6 +142,18 @@ class CandleReplayValidationRequest(CandleBacktestRequest):
     notes: str | None = None
 
 
+class PaperReplayBacktestRequest(BaseModel):
+    name: str = "historical-paper-replay"
+    symbol: str
+    timeframe: str = "5m"
+    limit: int = 10000
+    min_window: int = 200
+    quantity: int = 1
+    max_trades: int = 200
+    cooldown_candles: int = 0
+    include_trades: bool = True
+
+
 class RuleSuggestionPromotionRequest(BaseModel):
     review_note: str | None = None
 

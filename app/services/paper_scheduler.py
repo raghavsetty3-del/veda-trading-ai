@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import PaperTrade
+from app.models import MarketCandle, PaperTrade
 from app.services.audit import audit
 from app.services.market_data import market_snapshot
 from app.services.paper_trading import create_paper_trade, reconcile_open_paper_trades
@@ -26,6 +26,7 @@ def paper_scheduler_config() -> dict:
         "candle_limit": settings.paper_trading_candle_limit,
         "quantity": settings.paper_trading_quantity,
         "max_open_trades_per_symbol": settings.paper_max_open_trades_per_symbol,
+        "cooldown_candles": settings.paper_trade_cooldown_candles,
         "run_on_start": settings.paper_trading_on_start,
     }
 
@@ -55,6 +56,32 @@ def _open_trade_count_for_symbol(db: Session, symbol: str, timeframe: str) -> in
         .filter(PaperTrade.closed_at.is_(None))
         .filter(~PaperTrade.status.in_(closed_statuses))
         .count()
+    )
+
+
+def _has_recent_trade_in_cooldown(db: Session, symbol: str, timeframe: str, cooldown_candles: int) -> bool:
+    if cooldown_candles <= 0:
+        return False
+    recent_rows = (
+        db.query(MarketCandle.ts)
+        .filter(MarketCandle.symbol == symbol.upper(), MarketCandle.timeframe == timeframe.lower())
+        .order_by(MarketCandle.ts.desc())
+        .limit(cooldown_candles + 1)
+        .all()
+    )
+    recent_candle_labels = {row[0].isoformat() for row in recent_rows}
+    if not recent_candle_labels:
+        return False
+    rows = (
+        db.query(PaperTrade)
+        .filter(PaperTrade.symbol == symbol.upper(), PaperTrade.timeframe == timeframe.lower())
+        .order_by(PaperTrade.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    return any(
+        (row.context or {}).get("market_context", {}).get("last_candle_at") in recent_candle_labels
+        for row in rows
     )
 
 
@@ -107,6 +134,13 @@ def run_scheduled_paper_trading(
         if _has_existing_trade_for_candle(db, symbol, timeframe, last_candle_at):
             item["skipped"] = True
             item["reason"] = "Trade already evaluated for latest candle"
+            items.append(item)
+            continue
+
+        cooldown_candles = max(0, settings.paper_trade_cooldown_candles)
+        if _has_recent_trade_in_cooldown(db, symbol, timeframe, cooldown_candles):
+            item["skipped"] = True
+            item["reason"] = f"Paper trade cooldown active ({cooldown_candles} candles)"
             items.append(item)
             continue
 

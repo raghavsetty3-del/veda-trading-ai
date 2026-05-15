@@ -8,6 +8,6 @@ Recommended next build:
 5. Configure production blog RSS feeds and live Telegram listener credentials.
 6. Run live Telegram ingestion after credentials/session are configured.
 7. Add OpenAI-assisted extraction to enrich deterministic source extraction.
-8. Tune rules from provider-backed rolling replay and realized paper-trade metrics.
+8. Continue tuning from provider-backed rolling replay sweeps and realized paper-trade metrics.
 
 See `docs/TIMELINE.md` for dates, estimates, blockers, and live-readiness gates.
