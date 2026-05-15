@@ -21,7 +21,7 @@ Completed as of 2026-05-15:
 | Phase | Target Date | Estimate | Owner | Status |
 | --- | --- | --- | --- | --- |
 | GitHub sync | 2026-05-15 | 10 minutes | User | Current commits pushed |
-| Real market data provider | 2026-05-15 to 2026-05-16 | 0.5-1 day after URL/API credentials | Shared | Angel One connector ready; waiting for credentials |
+| Real market data provider | 2026-05-15 to 2026-05-16 | 0.5-1 day after URL/API credentials | Shared | Angel One and Dhan connectors ready; waiting for credentials |
 | Historical NIFTY/BANKNIFTY candles | 2026-05-16 to 2026-05-17 | 0.5-1 day after files/source | Shared | Waiting for OHLC data source |
 | Paper-trade evidence run | 2026-05-18 to 2026-05-24 | 5 trading sessions minimum | System | Needs live/provider candles |
 | Rule tuning from evidence | 2026-05-25 to 2026-05-29 | 3-5 days | Codex + User review | Depends on paper evidence |
@@ -55,7 +55,7 @@ cd ~/Downloads/veda-trading-ai-v0.2
 git push
 ```
 
-2. Provide one real market-data source or Angel One credentials:
+2. Provide one real market-data source, Angel One credentials, or DhanHQ credentials:
 
 ```text
 SYMBOL|timeframe|source_url
@@ -63,6 +63,8 @@ NIFTY|5m|https://...
 BANKNIFTY|5m|https://...
 NIFTY|5m|angelone://NSE/99926000
 BANKNIFTY|5m|angelone://NSE/99926009
+NIFTY|5m|dhan://IDX_I/13?instrument=INDEX
+BANKNIFTY|5m|dhan://IDX_I/25?instrument=INDEX
 ```
 
 3. Provide or choose an external alert receiver URL for `.healthwatch.env`.

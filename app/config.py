@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     angelone_client_mac: str = "00:00:00:00:00:00"
     angelone_history_days: int = 5
 
+    dhan_client_id: str | None = None
+    dhan_access_token: str | None = None
+    dhan_pin: str | None = None
+    dhan_totp_secret: str | None = None
+    dhan_history_days: int = 5
+
     telegram_api_id: str | None = None
     telegram_api_hash: str | None = None
     telegram_bot_token: str | None = None

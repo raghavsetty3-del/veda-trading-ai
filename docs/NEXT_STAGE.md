@@ -2,7 +2,7 @@
 
 Recommended next build:
 1. Push local commits to GitHub from an authenticated laptop shell.
-2. Configure real market-data provider CSV/HTTP sources or Angel One broker credentials.
+2. Configure real market-data provider CSV/HTTP sources, Angel One credentials, or DhanHQ credentials.
 3. Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.
 4. Let paper trading run for at least five trading sessions before live-readiness review.
 5. Review accumulated paper-trade exit evidence before enabling any live execution.

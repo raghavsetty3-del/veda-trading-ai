@@ -9,6 +9,7 @@ from app.services.audit import audit
 from app.services.angelone_market_data import angelone_status
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
+from app.services.dhan_market_data import dhan_status
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
 from app.services.knowledge_extraction import extraction_status, process_pending_sources, process_source
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
@@ -243,6 +244,11 @@ def get_market_provider_status():
 @app.get("/market/angelone/status")
 def get_angelone_market_status():
     return angelone_status()
+
+
+@app.get("/market/dhan/status")
+def get_dhan_market_status():
+    return dhan_status()
 
 
 @app.post("/market/provider/ingest")

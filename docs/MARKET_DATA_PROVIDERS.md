@@ -1,6 +1,6 @@
 # Market Data Providers
 
-Veda can ingest candle CSV from an HTTP URL, `file://` URL, local VM path, or Angel One SmartAPI `angelone://` source.
+Veda can ingest candle CSV from an HTTP URL, `file://` URL, local VM path, Angel One SmartAPI `angelone://` source, or DhanHQ `dhan://` source.
 
 ## CSV Format
 
@@ -50,6 +50,14 @@ MARKET_DATA_SOURCES=NIFTY|5m|angelone://NSE/99926000;BANKNIFTY|5m|angelone://NSE
 ```
 
 See `docs/ANGELONE_MARKET_DATA.md` for credentials and operational notes.
+
+DhanHQ sources use this format:
+
+```text
+MARKET_DATA_SOURCES=NIFTY|5m|dhan://IDX_I/13?instrument=INDEX;BANKNIFTY|5m|dhan://IDX_I/25?instrument=INDEX
+```
+
+See `docs/DHAN_MARKET_DATA.md` for credentials and operational notes.
 
 Then run manually:
 

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.schemas import MarketCandleCreate
 from app.services.angelone_market_data import angelone_status, fetch_angelone_candles_as_csv
+from app.services.dhan_market_data import dhan_status, fetch_dhan_candles_as_csv
 from app.services.market_data import upsert_candles
 
 
@@ -40,15 +41,25 @@ def market_provider_status() -> dict:
     sources = configured_market_sources()
     valid_sources = [source for source in sources if not source.get("error")]
     angelone = angelone_status()
+    dhan = dhan_status()
     angelone_source_count = sum(
         1
         for source in valid_sources
         if urlparse(source.get("source_url", "")).scheme == "angelone"
     )
+    dhan_source_count = sum(
+        1
+        for source in valid_sources
+        if urlparse(source.get("source_url", "")).scheme == "dhan"
+    )
     operational_sources = [
         source
         for source in valid_sources
-        if urlparse(source.get("source_url", "")).scheme != "angelone" or angelone["configured"]
+        if (
+            urlparse(source.get("source_url", "")).scheme not in {"angelone", "dhan"}
+            or (urlparse(source.get("source_url", "")).scheme == "angelone" and angelone["configured"])
+            or (urlparse(source.get("source_url", "")).scheme == "dhan" and dhan["configured"])
+        )
     ]
     return {
         "configured": bool(operational_sources),
@@ -58,13 +69,18 @@ def market_provider_status() -> dict:
         "interval_seconds": settings.market_data_ingest_interval_seconds,
         "limit": settings.market_data_ingest_limit,
         "run_on_start": settings.market_data_ingest_on_start,
-        "supported_sources": ["http", "https", "file", "local_path", "angelone"],
+        "supported_sources": ["http", "https", "file", "local_path", "angelone", "dhan"],
         "required_columns": ["ts", "open", "high", "low", "close"],
         "optional_columns": ["symbol", "timeframe", "volume", "source"],
         "angelone": {
             **angelone,
             "source_count": angelone_source_count,
             "operational": angelone_source_count == 0 or angelone["configured"],
+        },
+        "dhan": {
+            **dhan,
+            "source_count": dhan_source_count,
+            "operational": dhan_source_count == 0 or dhan["configured"],
         },
     }
 
@@ -73,6 +89,8 @@ def _fetch_source_text(source_url: str, default_symbol: str, default_timeframe: 
     parsed = urlparse(source_url)
     if parsed.scheme == "angelone":
         return fetch_angelone_candles_as_csv(source_url, default_symbol, default_timeframe, source_name)
+    if parsed.scheme == "dhan":
+        return fetch_dhan_candles_as_csv(source_url, default_symbol, default_timeframe, source_name)
     if parsed.scheme in {"http", "https"}:
         response = httpx.get(source_url, timeout=30)
         response.raise_for_status()

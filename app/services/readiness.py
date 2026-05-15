@@ -170,6 +170,9 @@ def build_readiness_report(db: Session) -> dict:
     angelone = market_status.get("angelone", {})
     if angelone.get("source_count") and not angelone.get("configured"):
         missing_inputs.extend(angelone.get("missing", []))
+    dhan = market_status.get("dhan", {})
+    if dhan.get("source_count") and not dhan.get("configured"):
+        missing_inputs.extend(dhan.get("missing", []))
     if not telegram["configured"]:
         missing_inputs.extend(telegram["missing"])
     if not extraction["openai_key_present"]:

@@ -62,6 +62,8 @@ if provider_status:
         st.json(provider_status.get("sources", []))
     with st.expander("Angel One SmartAPI"):
         st.json(provider_status.get("angelone", {}))
+    with st.expander("DhanHQ API"):
+        st.json(provider_status.get("dhan", {}))
     if st.button("Run Configured Provider Ingestion"):
         result = post("/market/provider/ingest-configured")
         if result:
