@@ -46,6 +46,18 @@ def _has_existing_trade_for_candle(db: Session, symbol: str, timeframe: str, las
     )
 
 
+def _has_open_trade_for_symbol(db: Session, symbol: str, timeframe: str) -> bool:
+    closed_statuses = {"cancelled", "closed", "exited", "stopped", "target_hit"}
+    return (
+        db.query(PaperTrade)
+        .filter(PaperTrade.symbol == symbol.upper(), PaperTrade.timeframe == timeframe.lower())
+        .filter(PaperTrade.closed_at.is_(None))
+        .filter(~PaperTrade.status.in_(closed_statuses))
+        .first()
+        is not None
+    )
+
+
 def run_scheduled_paper_trading(
     db: Session,
     symbols: list[str] | None = None,
@@ -80,6 +92,12 @@ def run_scheduled_paper_trading(
 
         if not snapshot["ready"]:
             item["skipped"] = True
+            items.append(item)
+            continue
+
+        if _has_open_trade_for_symbol(db, symbol, timeframe):
+            item["skipped"] = True
+            item["reason"] = "Open paper trade already active for symbol/timeframe"
             items.append(item)
             continue
 
