@@ -39,6 +39,14 @@ def _derive_rule_context(candles: list[MarketCandle]) -> dict:
 
     distance_from_ema_pct = _pct_distance(latest.close, ema_proxy)
     range_pct = range_points / latest.close * 100 if latest.close else 0.0
+    extreme_band_points = range_points * 0.1 if range_points else 0.0
+    at_recent_range_extreme = bool(
+        range_points
+        and (
+            recent_high - latest.close <= extreme_band_points
+            or latest.close - recent_low <= extreme_band_points
+        )
+    )
 
     return {
         "price_above_ema200": price_above_ema,
@@ -46,7 +54,7 @@ def _derive_rule_context(candles: list[MarketCandle]) -> dict:
         "retracement_pct": round(max(0.0, min(retracement_pct, 100.0)), 2),
         "distance_from_ema_pct": round(distance_from_ema_pct, 2),
         "higher_timeframe_bias": higher_timeframe_bias,
-        "at_channel_or_envelope_extreme": latest.close >= recent_high * 0.995 or latest.close <= recent_low * 1.005,
+        "at_channel_or_envelope_extreme": at_recent_range_extreme,
         "core_tools_aligned": market_structure in {"HH_HL", "LH_LL"},
         "emotional_state": "calm",
         "adx": round(18 + min(range_pct * 4, 12), 2),
