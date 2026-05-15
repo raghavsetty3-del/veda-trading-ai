@@ -4,7 +4,7 @@ Recommended next build:
 1. Push local commits to GitHub from an authenticated laptop shell.
 2. Verify scheduled off-VM PostgreSQL backup uploads and retention.
 3. Configure real market-data provider CSV/HTTP sources or broker credentials.
-4. Expand paper-trade validation from observation counts into P&L and exit-quality metrics.
+4. Expand live paper-trade records with exit price and realized P&L fields.
 5. Configure a real external webhook receiver for healthwatch alerts.
 6. Monitor weekly restore drill logs and audit events.
 7. Load historical NIFTY and BANKNIFTY candle datasets through CSV or provider ingestion.

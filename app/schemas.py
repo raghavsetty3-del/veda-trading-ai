@@ -93,6 +93,18 @@ class PaperTradeValidationRequest(BaseModel):
     notes: str | None = None
 
 
+class TradeExportValidationRequest(BaseModel):
+    symbol: str
+    source_path: str
+    timeframe: str | None = None
+    strategy_name: str = "strategy-trade-export"
+    rule_code: str | None = None
+    expected_min_trades: int = 20
+    expected_min_net_pnl: float = 0.0
+    expected_min_win_rate: float = 0.0
+    notes: str | None = None
+
+
 class BacktestStep(BaseModel):
     label: str | None = None
     market_context: dict
