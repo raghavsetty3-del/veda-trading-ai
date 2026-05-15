@@ -9,7 +9,7 @@ Recommended next build:
 6. Configure a real external webhook receiver for healthwatch alerts.
 7. Monitor weekly restore drill logs and audit events.
 8. Configure production blog RSS feeds and live Telegram listener credentials.
-9. Add live Telegram Telethon listener.
+9. Run live Telegram ingestion after credentials/session are configured.
 10. Add OpenAI-assisted extraction to enrich deterministic source extraction.
 11. Tighten activation evidence from scenario coverage into provider-backed replay and paper-trade metrics.
 

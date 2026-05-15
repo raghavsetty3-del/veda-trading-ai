@@ -42,7 +42,7 @@ Date: 2026-05-14
 - Backtest/replay evaluator and stored-candle replay are present.
 - Stored-candle replay can now create validation evidence cases.
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
-- Telegram export ingestion and credential readiness status are present.
+- Telegram export ingestion, credential readiness status, and live Telethon ingestion endpoint are present.
 - Local deterministic knowledge extraction workbench is present.
 - Optional OpenAI-assisted extraction is present and remains disabled until credentials are configured.
 - Review-only rule suggestion generator is present.

@@ -24,6 +24,16 @@ if st.button("Run Configured Blog Ingestion"):
 st.subheader("Telegram")
 telegram_status = requests.get(f"{API_BASE}/ingest/telegram/status", timeout=8).json()
 st.write(telegram_status)
+live_limit = st.number_input("Live Telegram Limit", min_value=1, max_value=500, value=int(telegram_status.get("ingest_limit", 50)))
+live_channels = st.text_input("Live Channel Override", value="")
+if st.button("Run Live Telegram Ingestion"):
+    payload = {
+        "limit": int(live_limit),
+        "channels": [item.strip() for item in live_channels.split(",") if item.strip()] or None,
+    }
+    r = requests.post(f"{API_BASE}/ingest/telegram/live", json=payload, timeout=120)
+    st.write(r.json())
+
 channel = st.text_input("Telegram channel/export name", value="manual-export")
 sample = [
     {

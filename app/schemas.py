@@ -164,6 +164,11 @@ class TelegramExportIngestRequest(BaseModel):
     messages: list[TelegramExportMessage]
 
 
+class TelegramLiveIngestRequest(BaseModel):
+    channels: list[str] | None = None
+    limit: int | None = None
+
+
 class ValidationCaseCreate(BaseModel):
     case_code: str
     title: str

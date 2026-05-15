@@ -32,13 +32,19 @@ telegram://<channel>/<message_id>
 
 Duplicate message IDs for the same channel are skipped.
 
-## Future Stage: Live Listener
+## Live Listener
 
-Live Telegram listening still requires:
+Live Telegram ingestion is implemented and remains inactive until credentials are configured. It requires:
 
 - `TELEGRAM_API_ID`
 - `TELEGRAM_API_HASH`
 - `TELEGRAM_CHANNELS`
+
+Optional:
+
+- `TELEGRAM_BOT_TOKEN`
+
+Without a bot token, the VM must already have an authorized Telethon user session file under `TELEGRAM_SESSION_DIR`.
 
 Check readiness:
 
@@ -46,4 +52,20 @@ Check readiness:
 curl http://localhost:8000/ingest/telegram/status
 ```
 
-Live listening remains disabled until credentials are configured and the listener is explicitly enabled.
+Ingest the latest configured messages:
+
+```bash
+curl -X POST http://localhost:8000/ingest/telegram/live \
+  -H "Content-Type: application/json" \
+  -d '{"limit": 50}'
+```
+
+Override channels for one run:
+
+```bash
+curl -X POST http://localhost:8000/ingest/telegram/live \
+  -H "Content-Type: application/json" \
+  -d '{"channels": ["channel_a", "channel_b"], "limit": 20}'
+```
+
+Each live message is archived through the same `SourceDocument` path as export ingestion.

@@ -29,8 +29,11 @@ class Settings(BaseSettings):
 
     telegram_api_id: str | None = None
     telegram_api_hash: str | None = None
+    telegram_bot_token: str | None = None
     telegram_session_name: str = "veda_telegram"
+    telegram_session_dir: str = "/app/data/telegram"
     telegram_channels: str | None = None
+    telegram_ingest_limit: int = 50
 
     x_bearer_token: str | None = None
     x_usernames: str | None = None

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperSchedulerRunRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, TelegramLiveIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate
 from app.services.audit import audit
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
 from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
@@ -26,6 +26,7 @@ from app.services.seed import seed_defaults
 from app.services.source_archive import archive_source_document
 from app.services.suggestions import promote_rule_suggestion, rule_suggestions
 from app.services.telegram_ingestion import ingest_telegram_export
+from app.services.telegram_live_ingestion import ingest_live_telegram
 from app.services.trade_export_validation import create_trade_export_validation
 from app.services.validation_evidence import create_candle_replay_validation
 from app.ingestion.blog import fetch_blog_page
@@ -344,6 +345,15 @@ def ingest_telegram_status():
 @app.post("/ingest/telegram/export")
 def ingest_telegram_export_request(payload: TelegramExportIngestRequest, db: Session = Depends(get_db)):
     return ingest_telegram_export(db, payload)
+
+
+@app.post("/ingest/telegram/live")
+async def ingest_telegram_live_request(payload: TelegramLiveIngestRequest | None = None, db: Session = Depends(get_db)):
+    payload = payload or TelegramLiveIngestRequest()
+    try:
+        return await ingest_live_telegram(db, limit=payload.limit, channels=payload.channels)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/insights")
