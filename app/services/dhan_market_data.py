@@ -2,6 +2,7 @@ import base64
 import csv
 import hashlib
 import hmac
+import json
 import struct
 import time
 from datetime import datetime, timedelta
@@ -39,10 +40,13 @@ def dhan_status() -> dict:
 
     configured = bool(settings.dhan_access_token) or not generation_missing
     missing = [] if configured else ["DHAN_ACCESS_TOKEN"] + generation_missing
+    token_expiry = _configured_token_expiry()
     return {
         "configured": configured,
         "missing": sorted(set(missing)),
         "has_access_token": bool(settings.dhan_access_token),
+        "access_token_expires_at": token_expiry.isoformat() if token_expiry else None,
+        "access_token_expired": token_expiry <= datetime.utcnow() if token_expiry else None,
         "can_generate_access_token": not generation_missing,
         "history_days": settings.dhan_history_days,
         "supported_intervals": sorted([*INTRADAY_INTERVALS, "1d"]),
@@ -63,6 +67,21 @@ def _totp(secret: str) -> str:
     offset = digest[-1] & 0x0F
     code = struct.unpack(">I", digest[offset:offset + 4])[0] & 0x7FFFFFFF
     return f"{code % 1_000_000:06d}"
+
+
+def _configured_token_expiry() -> datetime | None:
+    if not settings.dhan_access_token:
+        return None
+    try:
+        parts = settings.dhan_access_token.split(".")
+        if len(parts) < 2:
+            return None
+        payload = parts[1] + "=" * ((4 - len(parts[1]) % 4) % 4)
+        data = json.loads(base64.urlsafe_b64decode(payload))
+        expiry = data.get("exp")
+        return datetime.utcfromtimestamp(int(expiry)) if expiry else None
+    except Exception:
+        return None
 
 
 def _parse_expiry(value: str | None) -> datetime:
