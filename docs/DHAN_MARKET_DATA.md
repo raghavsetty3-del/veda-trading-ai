@@ -28,7 +28,8 @@ DHAN_CLIENT_ID=
 DHAN_ACCESS_TOKEN=
 DHAN_PIN=
 DHAN_TOTP_SECRET=
-DHAN_HISTORY_DAYS=5
+DHAN_HISTORY_DAYS=90
+DHAN_TOKEN_CACHE_PATH=/app/data/dhan_access_token.json
 ```
 
 You can provide either:
@@ -79,5 +80,7 @@ curl -X POST http://localhost:8000/market/provider/ingest-configured
 ## Notes
 
 - Dhan intraday historical data supports minute intervals `1`, `5`, `15`, `25`, and `60`.
-- Dhan documents a 90-day maximum per intraday request. Veda defaults to `DHAN_HISTORY_DAYS=5`.
+- Dhan documents a 90-day maximum per intraday request. Veda defaults to `DHAN_HISTORY_DAYS=90` for a deeper replay/tuning sample.
+- Keep `MARKET_DATA_INGEST_LIMIT` high enough for the selected interval. The default is `10000`, and capped imports retain the newest candles.
+- Veda stores generated Dhan access tokens in `DHAN_TOKEN_CACHE_PATH` so API and scheduler containers reuse the same token instead of hitting Dhan's token-generation rate limit.
 - Keep live trading disabled while validating feed quality, candle gaps, symbol IDs, and paper-trade behavior.

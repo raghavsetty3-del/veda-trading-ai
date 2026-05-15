@@ -3,11 +3,24 @@ from sqlalchemy.orm import Session
 from app.models import MarketCandle
 from app.services.instrument_profiles import apply_instrument_profile
 
+MAX_BULK_CANDLE_IMPORT = 20000
+MAX_CANDLE_QUERY_LIMIT = 10000
+
 
 def _pct_distance(value: float, reference: float) -> float:
     if reference == 0:
         return 0.0
     return abs(value - reference) / reference * 100
+
+
+def _ema(values: list[float], period: int) -> float:
+    if not values:
+        return 0.0
+    alpha = 2 / (period + 1)
+    ema = values[0]
+    for value in values[1:]:
+        ema = (value * alpha) + (ema * (1 - alpha))
+    return ema
 
 
 def _derive_rule_context(candles: list[MarketCandle]) -> dict:
@@ -16,8 +29,8 @@ def _derive_rule_context(candles: list[MarketCandle]) -> dict:
     recent_high = max(item.high for item in candles[-20:])
     recent_low = min(item.low for item in candles[-20:])
     range_points = max(recent_high - recent_low, 0.0)
-    ema_proxy = sum(closes[-50:]) / min(len(closes), 50)
-    price_above_ema = latest.close >= ema_proxy
+    ema200 = _ema(closes[-200:], 200)
+    price_above_ema = latest.close >= ema200
 
     if latest.close > closes[0] and price_above_ema:
         market_structure = "HH_HL"
@@ -37,7 +50,7 @@ def _derive_rule_context(candles: list[MarketCandle]) -> dict:
     else:
         retracement_pct = 100.0
 
-    distance_from_ema_pct = _pct_distance(latest.close, ema_proxy)
+    distance_from_ema_pct = _pct_distance(latest.close, ema200)
     range_pct = range_points / latest.close * 100 if latest.close else 0.0
     extreme_band_points = range_points * 0.1 if range_points else 0.0
     at_recent_range_extreme = bool(
@@ -110,8 +123,8 @@ def upsert_candle(db: Session, payload) -> MarketCandle:
 
 
 def upsert_candles(db: Session, candles: list) -> dict:
-    if len(candles) > 5000:
-        raise ValueError("Bulk candle import is limited to 5000 rows per request")
+    if len(candles) > MAX_BULK_CANDLE_IMPORT:
+        raise ValueError(f"Bulk candle import is limited to {MAX_BULK_CANDLE_IMPORT} rows per request")
 
     created = 0
     updated = 0
@@ -150,7 +163,7 @@ def upsert_candles(db: Session, candles: list) -> dict:
 
 
 def latest_candles(db: Session, symbol: str, timeframe: str = "5m", limit: int = 50) -> list[MarketCandle]:
-    safe_limit = max(1, min(limit, 500))
+    safe_limit = max(1, min(limit, MAX_CANDLE_QUERY_LIMIT))
     return (
         db.query(MarketCandle)
         .filter_by(symbol=symbol.upper(), timeframe=timeframe.lower())

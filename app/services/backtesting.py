@@ -68,7 +68,7 @@ def evaluate_candle_backtest(db: Session, payload) -> dict:
 
     steps = []
     for index in range(min_window, len(candles) + 1):
-        window = candles[:index]
+        window = candles[index - min_window:index]
         latest = window[-1]
         steps.append(Step(latest.ts.isoformat(), candle_market_context(payload.symbol, payload.timeframe, window)))
 

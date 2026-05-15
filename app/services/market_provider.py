@@ -118,8 +118,6 @@ def _parse_csv_candles(text: str, default_symbol: str, default_timeframe: str, s
     candles = []
     errors = []
     for index, raw_row in enumerate(reader, start=2):
-        if len(candles) >= max_rows:
-            break
         row = {str(key).strip().lower(): value for key, value in raw_row.items() if key}
         try:
             candles.append(MarketCandleCreate(
@@ -136,7 +134,11 @@ def _parse_csv_candles(text: str, default_symbol: str, default_timeframe: str, s
         except Exception as exc:
             if len(errors) < 20:
                 errors.append({"row": index, "error": str(exc)})
-    return {"candles": candles, "errors": errors, "truncated": len(candles) >= max_rows}
+    candles.sort(key=lambda candle: candle.ts.replace(tzinfo=None))
+    truncated = len(candles) > max_rows
+    if truncated:
+        candles = candles[-max_rows:]
+    return {"candles": candles, "errors": errors, "truncated": truncated}
 
 
 def ingest_market_source(db: Session, source: dict) -> dict:
@@ -147,7 +149,7 @@ def ingest_market_source(db: Session, source: dict) -> dict:
     timeframe = source.get("timeframe", "5m").lower()
     source_url = source["source_url"]
     source_name = source.get("source_name") or f"provider:{symbol}:{timeframe}"
-    max_rows = max(1, min(int(source.get("max_rows") or settings.market_data_ingest_limit), 5000))
+    max_rows = max(1, min(int(source.get("max_rows") or settings.market_data_ingest_limit), 20000))
 
     try:
         text = _fetch_source_text(source_url, symbol, timeframe, source_name)

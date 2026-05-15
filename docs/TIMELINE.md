@@ -15,9 +15,10 @@ Completed as of 2026-05-15:
 - BankNifty strategy trade export was imported and recorded as failed performance evidence because net P&L was negative.
 - The failed BankNifty trade export has been reviewed as not promoted; the failed result is retained.
 - DhanHQ is configured for NIFTY and BANKNIFTY 5-minute provider-backed candles.
-- More than 2,900 provider-backed candles per instrument are loaded.
-- Dhan-backed stored-candle replay validation passes for the tuned RULE-RETRACEMENT-LRHR band on NIFTY and BANKNIFTY.
-- Author-aligned tuning now requires price action structure, 200 EMA bias, LRHR retracement, and higher-timeframe direction before long/short bias.
+- More than 4,400 provider-backed candles per instrument are loaded.
+- Dhan-backed stored-candle replay validation passes for the tuned RULE-RETRACEMENT-LRHR band on NIFTY and BANKNIFTY using rolling 200-candle windows.
+- Author-aligned tuning now requires price action structure, true EMA200 bias, LRHR retracement, and higher-timeframe direction before long/short bias.
+- Pre-EMA200 open paper trades were cancelled as superseded so new evidence starts from the corrected strategy logic.
 - Previous provider-backed open paper trades were cancelled because their retracement was too shallow under the tuned LRHR band.
 - Healthwatch, daily offsite backups, and weekly restore drills are active.
 - Live trading remains disabled.

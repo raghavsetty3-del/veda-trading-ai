@@ -28,7 +28,7 @@ curl -X POST http://localhost:8000/market/provider/ingest \
     "timeframe":"5m",
     "source_url":"/home/traderadmin/data/nifty_5m.csv",
     "source_name":"provider:nifty-csv",
-    "max_rows":5000
+    "max_rows":10000
   }'
 ```
 
@@ -39,7 +39,7 @@ Set `MARKET_DATA_SOURCES` in `.env` as semicolon-separated entries:
 ```text
 MARKET_DATA_SOURCES=NIFTY|5m|/home/traderadmin/data/nifty_5m.csv;BANKNIFTY|5m|https://example.com/banknifty_5m.csv
 MARKET_DATA_INGEST_INTERVAL_SECONDS=900
-MARKET_DATA_INGEST_LIMIT=5000
+MARKET_DATA_INGEST_LIMIT=10000
 MARKET_DATA_INGEST_ON_START=false
 ```
 
@@ -70,6 +70,8 @@ The scheduler runs configured provider ingestion on the configured interval, and
 - market snapshots;
 - stored-candle replay;
 - scheduled paper-trading evaluation.
+
+When a provider returns more candles than the configured ingest limit, Veda keeps the newest candles so replay and paper-trading checks remain anchored to current market structure.
 
 ## Live-Readiness Evidence
 

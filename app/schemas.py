@@ -61,7 +61,7 @@ class MarketProviderIngestRequest(BaseModel):
     timeframe: str = "5m"
     source_url: str
     source_name: str | None = None
-    max_rows: int = 5000
+    max_rows: int = 10000
 
 
 class PaperTradeRequest(BaseModel):
@@ -132,8 +132,8 @@ class CandleBacktestRequest(BaseModel):
     name: str = "stored-candle-replay"
     symbol: str
     timeframe: str = "5m"
-    limit: int = 200
-    min_window: int = 20
+    limit: int = 1000
+    min_window: int = 200
 
 
 class CandleReplayValidationRequest(CandleBacktestRequest):

@@ -7,6 +7,7 @@ import struct
 import time
 from datetime import datetime, timedelta
 from io import StringIO
+from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 from zoneinfo import ZoneInfo
 
@@ -48,6 +49,7 @@ def dhan_status() -> dict:
         "access_token_expires_at": token_expiry.isoformat() if token_expiry else None,
         "access_token_expired": token_expiry <= datetime.utcnow() if token_expiry else None,
         "can_generate_access_token": not generation_missing,
+        "has_cached_access_token": bool(_read_disk_token()[0]),
         "history_days": settings.dhan_history_days,
         "supported_intervals": sorted([*INTRADAY_INTERVALS, "1d"]),
         "source_format": "dhan://EXCHANGE_SEGMENT/SECURITY_ID?instrument=INDEX",
@@ -86,8 +88,11 @@ def _configured_token_expiry() -> datetime | None:
 
 def _parse_expiry(value: str | None) -> datetime:
     if not value:
-        return datetime.now(ZoneInfo("Asia/Kolkata")) + timedelta(hours=23)
-    return datetime.fromisoformat(value.replace("Z", "+00:00")).replace(tzinfo=None)
+        return datetime.utcnow() + timedelta(hours=23)
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo:
+        return parsed.astimezone(ZoneInfo("UTC")).replace(tzinfo=None)
+    return parsed
 
 
 def _generate_access_token() -> tuple[str, datetime]:
@@ -108,18 +113,56 @@ def _generate_access_token() -> tuple[str, datetime]:
     return token, _parse_expiry(data.get("expiryTime"))
 
 
+def _token_has_time_left(expiry: datetime | None) -> bool:
+    return bool(expiry and expiry - datetime.utcnow() > timedelta(minutes=5))
+
+
+def _read_disk_token() -> tuple[str | None, datetime | None]:
+    path = Path(settings.dhan_token_cache_path)
+    try:
+        if not path.exists():
+            return None, None
+        data = json.loads(path.read_text(encoding="utf-8"))
+        token = data.get("token")
+        expiry_raw = data.get("expiry")
+        expiry = _parse_expiry(expiry_raw) if expiry_raw else None
+        if isinstance(token, str) and _token_has_time_left(expiry):
+            return token, expiry
+    except Exception:
+        return None, None
+    return None, None
+
+
+def _write_disk_token(token: str, expiry: datetime) -> None:
+    path = Path(settings.dhan_token_cache_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"token": token, "expiry": expiry.isoformat()}
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    try:
+        path.chmod(0o600)
+    except OSError:
+        pass
+
+
 def _access_token() -> str:
     if settings.dhan_access_token:
         return settings.dhan_access_token
     cached_token = _TOKEN_CACHE.get("token")
     cached_expiry = _TOKEN_CACHE.get("expiry")
     if isinstance(cached_token, str) and isinstance(cached_expiry, datetime):
-        if cached_expiry - datetime.now() > timedelta(minutes=5):
+        if _token_has_time_left(cached_expiry):
             return cached_token
+
+    disk_token, disk_expiry = _read_disk_token()
+    if disk_token and disk_expiry:
+        _TOKEN_CACHE["token"] = disk_token
+        _TOKEN_CACHE["expiry"] = disk_expiry
+        return disk_token
 
     token, expiry = _generate_access_token()
     _TOKEN_CACHE["token"] = token
     _TOKEN_CACHE["expiry"] = expiry
+    _write_disk_token(token, expiry)
     return token
 
 

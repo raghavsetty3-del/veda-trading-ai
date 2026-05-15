@@ -37,19 +37,21 @@ Date: 2026-05-15
 - Angel One SmartAPI historical candle ingestion is present through `angelone://` provider sources.
 - DhanHQ historical candle ingestion is present through `dhan://` provider sources.
 - DhanHQ is configured as the active provider for NIFTY and BANKNIFTY 5-minute candles.
-- Provider-backed NIFTY and BANKNIFTY history is loaded from DhanHQ; recurring ingestion is back to the lighter 5-day refresh window.
+- Provider-backed NIFTY and BANKNIFTY history is loaded from DhanHQ with a 90-day intraday window and more than 4,400 candles per instrument.
+- Dhan token generation now uses a shared on-disk token cache so API and scheduler containers do not repeatedly hit Dhan's token-generation rate limit.
+- Provider ingestion keeps the newest candles when an import is capped, preserving current market context for replay and paper trading.
 - Paper-trading simulation endpoints and dashboard page are present.
 - Scheduled paper-trading evaluation is present and skips duplicate latest candles.
 - Paper trades can record exits, realized P&L, and R-multiple.
 - Open paper trades can be reconciled automatically against later stored candles for target/stop exits.
-- Paper scheduler is active and now waits for strict JustNifty-aligned LRHR setups before opening new trades.
+- Paper scheduler is active with a 250-candle context window and now waits for strict JustNifty-aligned LRHR setups before opening new trades.
 - Paper-trading observations and closed-trade P&L can now create validation evidence cases.
 - Strategy trade-export CSVs can now create performance validation evidence cases.
 - Failed trade-export evidence can be reviewed as not promoted while preserving the failed result.
 - Backtest/replay evaluator and stored-candle replay are present.
 - Stored-candle replay can now create validation evidence cases.
-- Dhan-backed stored-candle replay validation is passing for the tuned RULE-RETRACEMENT-LRHR band on both NIFTY and BANKNIFTY.
-- Setup scoring was retuned to match the JustNifty extraction: directional bias now requires aligned price action structure, 200 EMA bias, LRHR retracement, and higher-timeframe direction.
+- Dhan-backed stored-candle replay validation is passing for the tuned RULE-RETRACEMENT-LRHR band on both NIFTY and BANKNIFTY over rolling 200-candle windows.
+- Setup scoring was retuned to match the JustNifty extraction: directional bias now requires aligned price action structure, true EMA200 bias, LRHR retracement, and higher-timeframe direction.
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
 - Telegram export ingestion, credential readiness status, and live Telethon ingestion endpoint are present.
 - Local deterministic knowledge extraction workbench is present.

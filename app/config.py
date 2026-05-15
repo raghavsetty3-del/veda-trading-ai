@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     market_data_sources: str | None = None
     market_data_ingest_interval_seconds: int = 900
-    market_data_ingest_limit: int = 5000
+    market_data_ingest_limit: int = 10000
     market_data_ingest_on_start: bool = False
 
     angelone_api_key: str | None = None
@@ -40,7 +40,8 @@ class Settings(BaseSettings):
     dhan_access_token: str | None = None
     dhan_pin: str | None = None
     dhan_totp_secret: str | None = None
-    dhan_history_days: int = 5
+    dhan_history_days: int = 90
+    dhan_token_cache_path: str = "/app/data/dhan_access_token.json"
 
     telegram_api_id: str | None = None
     telegram_api_hash: str | None = None
@@ -58,7 +59,7 @@ class Settings(BaseSettings):
     paper_trading_symbols: str = "NIFTY,BANKNIFTY"
     paper_trading_timeframe: str = "5m"
     paper_trading_interval_seconds: int = 300
-    paper_trading_candle_limit: int = 50
+    paper_trading_candle_limit: int = 250
     paper_trading_quantity: int = 1
     paper_max_open_trades_per_symbol: int = 1
     paper_trading_on_start: bool = False
