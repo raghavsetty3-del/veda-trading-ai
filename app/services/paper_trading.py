@@ -13,6 +13,63 @@ def list_paper_trades(db: Session, limit: int = 100) -> list[PaperTrade]:
     return db.query(PaperTrade).order_by(PaperTrade.created_at.desc()).limit(safe_limit).all()
 
 
+def paper_performance_metrics(db: Session, symbols: list[str] | None = None, limit: int = 500) -> dict:
+    safe_limit = max(1, min(limit, 500))
+    query = db.query(PaperTrade)
+    if symbols:
+        query = query.filter(PaperTrade.symbol.in_([item.upper() for item in symbols]))
+    rows = query.order_by(PaperTrade.created_at.desc()).limit(safe_limit).all()
+
+    grouped: dict[str, list[PaperTrade]] = {}
+    for row in rows:
+        grouped.setdefault(row.symbol, []).append(row)
+
+    items = []
+    for symbol in sorted(grouped):
+        symbol_rows = grouped[symbol]
+        realized_values = [row.realized_pnl for row in symbol_rows if row.realized_pnl is not None]
+        gross_profit = round(sum(value for value in realized_values if value > 0), 2)
+        gross_loss = round(abs(sum(value for value in realized_values if value < 0)), 2)
+        net_pnl = round(sum(realized_values), 2)
+        if not realized_values:
+            profit_factor = None
+            profit_factor_label = "N/A"
+        elif gross_loss == 0 and gross_profit > 0:
+            profit_factor = None
+            profit_factor_label = "Infinite (no realized losses yet)"
+        elif gross_loss > 0:
+            profit_factor = round(gross_profit / gross_loss, 3)
+            profit_factor_label = str(profit_factor)
+        else:
+            profit_factor = 0.0
+            profit_factor_label = "0.0"
+
+        closed_wins = [value for value in realized_values if value > 0]
+        r_values = [row.r_multiple for row in symbol_rows if row.r_multiple is not None]
+        items.append({
+            "symbol": symbol,
+            "total_trades": len(symbol_rows),
+            "open_trades": sum(1 for row in symbol_rows if row.status == "planned"),
+            "cancelled_trades": sum(1 for row in symbol_rows if row.status == "cancelled"),
+            "realized_closed_trades": len(realized_values),
+            "minimum_review_trades": 20,
+            "sample_ready": len(realized_values) >= 20,
+            "gross_profit": gross_profit,
+            "gross_loss": gross_loss,
+            "net_realized_pnl": net_pnl,
+            "profit_factor": profit_factor,
+            "profit_factor_label": profit_factor_label,
+            "win_rate": round(len(closed_wins) / len(realized_values), 4) if realized_values else None,
+            "average_r_multiple": round(sum(r_values) / len(r_values), 3) if r_values else None,
+        })
+
+    return {
+        "limit": safe_limit,
+        "symbols": sorted(grouped),
+        "items": items,
+    }
+
+
 def serialize_paper_trade(row: PaperTrade) -> dict:
     return {
         "id": row.id,

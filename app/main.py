@@ -15,7 +15,7 @@ from app.services.knowledge_extraction import extraction_status, process_pending
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
 from app.services.market_provider import ingest_configured_market_sources, ingest_market_source, market_provider_status
 from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
-from app.services.paper_trading import create_paper_trade, list_paper_trades, reconcile_open_paper_trades, update_paper_trade_status
+from app.services.paper_trading import create_paper_trade, list_paper_trades, paper_performance_metrics, reconcile_open_paper_trades, update_paper_trade_status
 from app.services.paper_validation import create_paper_trade_validation
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.readiness import build_readiness_report
@@ -268,6 +268,12 @@ def ingest_configured_market_provider(db: Session = Depends(get_db)):
 @app.get("/paper/trades")
 def paper_trades(limit: int = 100, db: Session = Depends(get_db)):
     return list_paper_trades(db, limit=limit)
+
+
+@app.get("/paper/performance")
+def paper_performance(symbols: str | None = None, limit: int = 500, db: Session = Depends(get_db)):
+    parsed_symbols = [item.strip().upper() for item in symbols.split(",") if item.strip()] if symbols else None
+    return paper_performance_metrics(db, symbols=parsed_symbols, limit=limit)
 
 
 @app.post("/paper/trades")

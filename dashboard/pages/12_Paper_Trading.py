@@ -46,6 +46,22 @@ symbols = [item["symbol"] for item in (get("/instruments") or [])]
 symbol = st.selectbox("Symbol", symbols or ["NIFTY", "BANKNIFTY"])
 timeframe = st.selectbox("Timeframe", ["5m", "15m", "1h", "1d"], index=0)
 
+st.subheader("Performance")
+performance = get("/paper/performance", {"limit": 500}) or {}
+performance_items = performance.get("items", [])
+selected_performance = next((item for item in performance_items if item.get("symbol") == symbol), None)
+if selected_performance:
+    cols = st.columns(5)
+    cols[0].metric("Realized", selected_performance.get("realized_closed_trades"))
+    cols[1].metric("Open", selected_performance.get("open_trades"))
+    cols[2].metric("Net P&L", selected_performance.get("net_realized_pnl"))
+    cols[3].metric("Profit Factor", selected_performance.get("profit_factor_label"))
+    cols[4].metric("Sample Ready", str(selected_performance.get("sample_ready")))
+if performance_items:
+    st.dataframe(pd.DataFrame(performance_items), use_container_width=True)
+else:
+    st.info("No paper performance metrics yet.")
+
 st.subheader("Create Simulated Trade")
 with st.form("paper_trade"):
     last_price = st.number_input("Last Price", min_value=0.0, step=1.0)
