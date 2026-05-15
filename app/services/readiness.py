@@ -23,11 +23,31 @@ def _paper_metrics(db: Session, symbol: str) -> dict:
     pnl_values = [row.realized_pnl for row in closed if row.realized_pnl is not None]
     r_values = [row.r_multiple for row in closed if row.r_multiple is not None]
     wins = [value for value in pnl_values if value > 0]
+    gross_profit = round(sum(value for value in pnl_values if value > 0), 2)
+    gross_loss = round(abs(sum(value for value in pnl_values if value < 0)), 2)
+    if not pnl_values:
+        profit_factor = None
+        profit_factor_label = "N/A"
+    elif gross_loss == 0 and gross_profit > 0:
+        profit_factor = None
+        profit_factor_label = "Infinite (no realized losses yet)"
+    elif gross_loss > 0:
+        profit_factor = round(gross_profit / gross_loss, 3)
+        profit_factor_label = str(profit_factor)
+    else:
+        profit_factor = 0.0
+        profit_factor_label = "0.0"
     return {
         "symbol": symbol.upper(),
         "total_paper_trades": len(rows),
         "closed_paper_trades": len(closed),
+        "minimum_review_trades": 20,
+        "sample_ready": len(closed) >= 20,
+        "gross_profit": gross_profit,
+        "gross_loss": gross_loss,
         "net_realized_pnl": round(sum(pnl_values), 2),
+        "profit_factor": profit_factor,
+        "profit_factor_label": profit_factor_label,
         "closed_win_rate": round(len(wins) / len(pnl_values), 4) if pnl_values else None,
         "average_r_multiple": round(sum(r_values) / len(r_values), 3) if r_values else None,
     }
