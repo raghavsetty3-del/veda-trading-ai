@@ -57,6 +57,10 @@ if selected_performance:
     cols[2].metric("Net P&L", selected_performance.get("net_realized_pnl"))
     cols[3].metric("Profit Factor", selected_performance.get("profit_factor_label"))
     cols[4].metric("Sample Ready", str(selected_performance.get("sample_ready")))
+    risk_cols = st.columns(3)
+    risk_cols[0].metric("Open Risk", selected_performance.get("open_risk_points"))
+    risk_cols[1].metric("Open Reward", selected_performance.get("open_reward_points"))
+    risk_cols[2].metric("Open R:R", selected_performance.get("open_reward_risk_ratio"))
 if performance_items:
     st.dataframe(pd.DataFrame(performance_items), use_container_width=True)
 else:

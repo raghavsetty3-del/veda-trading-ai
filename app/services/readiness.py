@@ -20,9 +20,17 @@ def _paper_metrics(db: Session, symbol: str) -> dict:
         .all()
     )
     closed = [row for row in rows if row.realized_pnl is not None]
+    open_rows = [row for row in rows if row.status == "planned"]
     pnl_values = [row.realized_pnl for row in closed if row.realized_pnl is not None]
     r_values = [row.r_multiple for row in closed if row.r_multiple is not None]
     wins = [value for value in pnl_values if value > 0]
+    open_risk_points = 0.0
+    open_reward_points = 0.0
+    for row in open_rows:
+        if row.stop_loss is not None:
+            open_risk_points += abs(row.entry_price - row.stop_loss) * row.quantity
+        if row.target is not None:
+            open_reward_points += abs(row.target - row.entry_price) * row.quantity
     gross_profit = round(sum(value for value in pnl_values if value > 0), 2)
     gross_loss = round(abs(sum(value for value in pnl_values if value < 0)), 2)
     if not pnl_values:
@@ -40,6 +48,12 @@ def _paper_metrics(db: Session, symbol: str) -> dict:
     return {
         "symbol": symbol.upper(),
         "total_paper_trades": len(rows),
+        "open_paper_trades": len(open_rows),
+        "open_trade_ids": [row.id for row in open_rows],
+        "open_sides": sorted({row.side for row in open_rows}),
+        "open_risk_points": round(open_risk_points, 2),
+        "open_reward_points": round(open_reward_points, 2),
+        "open_reward_risk_ratio": round(open_reward_points / open_risk_points, 3) if open_risk_points > 0 else None,
         "closed_paper_trades": len(closed),
         "minimum_review_trades": 20,
         "sample_ready": len(closed) >= 20,

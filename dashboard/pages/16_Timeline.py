@@ -132,6 +132,10 @@ if paper:
         pd.DataFrame([
             {
                 "Symbol": item.get("symbol"),
+                "Open": item.get("open_paper_trades"),
+                "Open Risk": item.get("open_risk_points"),
+                "Open Reward": item.get("open_reward_points"),
+                "Open R:R": item.get("open_reward_risk_ratio"),
                 "Closed": item.get("closed_paper_trades"),
                 "Minimum": item.get("minimum_review_trades"),
                 "Sample Ready": item.get("sample_ready"),

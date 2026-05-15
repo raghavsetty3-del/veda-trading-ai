@@ -28,6 +28,14 @@ def paper_performance_metrics(db: Session, symbols: list[str] | None = None, lim
     for symbol in sorted(grouped):
         symbol_rows = grouped[symbol]
         realized_values = [row.realized_pnl for row in symbol_rows if row.realized_pnl is not None]
+        open_rows = [row for row in symbol_rows if row.status == "planned"]
+        open_risk_points = 0.0
+        open_reward_points = 0.0
+        for row in open_rows:
+            if row.stop_loss is not None:
+                open_risk_points += abs(row.entry_price - row.stop_loss) * row.quantity
+            if row.target is not None:
+                open_reward_points += abs(row.target - row.entry_price) * row.quantity
         gross_profit = round(sum(value for value in realized_values if value > 0), 2)
         gross_loss = round(abs(sum(value for value in realized_values if value < 0)), 2)
         net_pnl = round(sum(realized_values), 2)
@@ -49,7 +57,12 @@ def paper_performance_metrics(db: Session, symbols: list[str] | None = None, lim
         items.append({
             "symbol": symbol,
             "total_trades": len(symbol_rows),
-            "open_trades": sum(1 for row in symbol_rows if row.status == "planned"),
+            "open_trades": len(open_rows),
+            "open_trade_ids": [row.id for row in open_rows],
+            "open_sides": sorted({row.side for row in open_rows}),
+            "open_risk_points": round(open_risk_points, 2),
+            "open_reward_points": round(open_reward_points, 2),
+            "open_reward_risk_ratio": round(open_reward_points / open_risk_points, 3) if open_risk_points > 0 else None,
             "cancelled_trades": sum(1 for row in symbol_rows if row.status == "cancelled"),
             "realized_closed_trades": len(realized_values),
             "minimum_review_trades": 20,
