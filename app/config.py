@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     paper_trading_interval_seconds: int = 300
     paper_trading_candle_limit: int = 50
     paper_trading_quantity: int = 1
+    paper_max_open_trades_per_symbol: int = 1
     paper_trading_on_start: bool = False
     global_kill_switch: bool = False
     max_daily_drawdown_pct: float = 1.0

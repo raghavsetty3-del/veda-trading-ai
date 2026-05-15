@@ -25,6 +25,7 @@ def paper_scheduler_config() -> dict:
         "interval_seconds": settings.paper_trading_interval_seconds,
         "candle_limit": settings.paper_trading_candle_limit,
         "quantity": settings.paper_trading_quantity,
+        "max_open_trades_per_symbol": settings.paper_max_open_trades_per_symbol,
         "run_on_start": settings.paper_trading_on_start,
     }
 
@@ -46,15 +47,14 @@ def _has_existing_trade_for_candle(db: Session, symbol: str, timeframe: str, las
     )
 
 
-def _has_open_trade_for_symbol(db: Session, symbol: str, timeframe: str) -> bool:
+def _open_trade_count_for_symbol(db: Session, symbol: str, timeframe: str) -> int:
     closed_statuses = {"cancelled", "closed", "exited", "stopped", "target_hit"}
     return (
         db.query(PaperTrade)
         .filter(PaperTrade.symbol == symbol.upper(), PaperTrade.timeframe == timeframe.lower())
         .filter(PaperTrade.closed_at.is_(None))
         .filter(~PaperTrade.status.in_(closed_statuses))
-        .first()
-        is not None
+        .count()
     )
 
 
@@ -95,9 +95,11 @@ def run_scheduled_paper_trading(
             items.append(item)
             continue
 
-        if _has_open_trade_for_symbol(db, symbol, timeframe):
+        open_trade_count = _open_trade_count_for_symbol(db, symbol, timeframe)
+        max_open_trades = max(1, settings.paper_max_open_trades_per_symbol)
+        if open_trade_count >= max_open_trades:
             item["skipped"] = True
-            item["reason"] = "Open paper trade already active for symbol/timeframe"
+            item["reason"] = f"Open paper trade limit reached for symbol/timeframe ({open_trade_count}/{max_open_trades})"
             items.append(item)
             continue
 
