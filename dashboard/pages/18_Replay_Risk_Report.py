@@ -40,7 +40,21 @@ def as_frame(rows: list[dict], preferred: list[str]) -> pd.DataFrame:
     return frame[ordered]
 
 
-payload = get("/reports/replay-risk/latest") or {}
+reports_payload = get("/reports/replay-risk") or {}
+report_items = reports_payload.get("items") or []
+selected_name = None
+if report_items:
+    labels = {
+        item["name"]: (
+            f"{item['name']} | "
+            f"{item.get('generated_at', 'unknown')[:19]} | "
+            f"{', '.join(symbol.get('symbol', '') for symbol in item.get('symbols') or [])}"
+        )
+        for item in report_items
+    }
+    selected_name = st.selectbox("Report", list(labels), format_func=lambda value: labels[value])
+
+payload = get("/reports/replay-risk/latest", {"name": selected_name} if selected_name else None) or {}
 if not payload.get("available"):
     st.info("No replay risk report found yet. Run scripts/run_replay_risk_report.py to generate one.")
     if payload.get("searched_paths"):

@@ -24,6 +24,7 @@ Last updated: 2026-05-16
 - BANKNIFTY historical replay: 500 realized trades, profit factor 1.881, net 22044.97 points, max drawdown 2024.03 points.
 - BANKNIFTY sell side is the weakest replay pocket: profit factor 1.626, max drawdown 2024.03 points.
 - BANKNIFTY sell-side quick tuning screen: best starter candidate uses part-book fraction 0.6 and trail lookback 2, improving 100-trade screened sell drawdown by 404.81 points and sell profit factor from 1.331 to 1.602.
+- BANKNIFTY best-candidate 500-trade replay: profit factor 2.348, net 26602.07 points, max drawdown 1619.22 points; sell-side profit factor 1.972 across 219 sell trades.
 - Forward paper evidence is not ready yet: NIFTY has 1 closed paper trade; BANKNIFTY has 0 closed paper trades.
 
 ## Pending
@@ -31,7 +32,7 @@ Last updated: 2026-05-16
 - Wait for regular market sessions to collect at least 20 closed forward paper trades per symbol.
 - Confirm forward paper P&L remains positive for NIFTY and BANKNIFTY.
 - Finish processing the remaining blog/chart extraction backlog.
-- Validate BANKNIFTY sell-side tuning candidates on the full 500-trade replay before promoting any parameter change.
+- Finish the larger BANKNIFTY sell-side tuning grid before promoting any parameter change.
 - Keep validating chart-image extraction quality against the author's chart annotations.
 - Push any local commits that require laptop SSH passphrase entry.
 

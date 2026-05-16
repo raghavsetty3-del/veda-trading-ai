@@ -12,14 +12,65 @@ REPORT_DIRS = [
 
 
 def _report_files(pattern: str) -> list[Path]:
-    files: list[Path] = []
+    files_by_name: dict[str, Path] = {}
     for directory in REPORT_DIRS:
         if directory.exists():
-            files.extend(directory.glob(pattern))
-    return sorted(set(files), key=lambda path: (path.stat().st_mtime, path.name), reverse=True)
+            for path in directory.glob(pattern):
+                existing = files_by_name.get(path.name)
+                if existing is None or path.stat().st_mtime > existing.stat().st_mtime:
+                    files_by_name[path.name] = path
+    return sorted(files_by_name.values(), key=lambda path: (path.stat().st_mtime, path.name), reverse=True)
 
 
-def latest_replay_risk_report() -> dict[str, Any]:
+def _load_report(path: Path) -> dict[str, Any]:
+    report = json.loads(path.read_text(encoding="utf-8-sig"))
+    return {
+        "available": True,
+        "name": path.name,
+        "path": str(path),
+        "updated_at": datetime.utcfromtimestamp(path.stat().st_mtime).isoformat(),
+        "report": report,
+    }
+
+
+def list_replay_risk_reports() -> dict[str, Any]:
+    files = _report_files("replay_risk_report_*.json")
+    if not files:
+        return {
+            "available": False,
+            "searched_paths": [str(path) for path in REPORT_DIRS],
+            "items": [],
+        }
+
+    items = []
+    for path in files:
+        try:
+            report = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        symbols = [
+            {
+                "symbol": item.get("symbol"),
+                "trades": (item.get("metrics") or {}).get("trades"),
+                "profit_factor": (item.get("metrics") or {}).get("profit_factor_label"),
+            }
+            for item in report.get("symbols") or []
+        ]
+        items.append({
+            "name": path.name,
+            "path": str(path),
+            "updated_at": datetime.utcfromtimestamp(path.stat().st_mtime).isoformat(),
+            "generated_at": report.get("generated_at"),
+            "symbols": symbols,
+            "config": report.get("config") or {},
+        })
+    return {
+        "available": True,
+        "items": items,
+    }
+
+
+def latest_replay_risk_report(name: str | None = None) -> dict[str, Any]:
     files = _report_files("replay_risk_report_*.json")
     if not files:
         return {
@@ -28,11 +79,16 @@ def latest_replay_risk_report() -> dict[str, Any]:
             "report": None,
         }
 
-    latest = files[0]
-    report = json.loads(latest.read_text(encoding="utf-8-sig"))
-    return {
-        "available": True,
-        "path": str(latest),
-        "updated_at": datetime.utcfromtimestamp(latest.stat().st_mtime).isoformat(),
-        "report": report,
-    }
+    if name:
+        safe_name = Path(name).name
+        for path in files:
+            if path.name == safe_name:
+                return _load_report(path)
+        return {
+            "available": False,
+            "searched_paths": [str(path) for path in REPORT_DIRS],
+            "report": None,
+            "error": f"Replay risk report not found: {safe_name}",
+        }
+
+    return _load_report(files[0])
