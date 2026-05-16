@@ -99,6 +99,13 @@ def seed_defaults(db: Session):
             {"at_channel_or_envelope_extreme": True, "system_should": "part_book_and_trail"},
             "Validates profit management at channel/envelope/target extremes.",
         ),
+        (
+            "VAL-JN-006",
+            "Entry timeframe structure is still required",
+            "AP-006",
+            {"higher_timeframe_bias": "bearish", "market_structure": "sideways", "system_should": "wait_for_lh_ll_entry_structure"},
+            "Validates that higher-timeframe bearishness alone does not create a short without entry-timeframe LH/LL price action.",
+        ),
     ]
 
     for case_code, title, ap_code, expected_json, notes in validation_cases:

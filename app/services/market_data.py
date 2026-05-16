@@ -5,6 +5,12 @@ from app.services.instrument_profiles import apply_instrument_profile
 
 MAX_BULK_CANDLE_IMPORT = 20000
 MAX_CANDLE_QUERY_LIMIT = 10000
+HIGHER_TIMEFRAME_MAP = {
+    "1m": ["5m", "15m"],
+    "3m": ["15m", "1h"],
+    "5m": ["15m", "1h"],
+    "15m": ["1h"],
+}
 
 
 def _pct_distance(value: float, reference: float) -> float:
@@ -100,6 +106,66 @@ def candle_market_context(symbol: str, timeframe: str, candles: list[MarketCandl
     })
 
 
+def _higher_timeframe_summary(candles: list[MarketCandle], timeframe: str) -> dict:
+    context = _derive_rule_context(candles)
+    latest = candles[-1]
+    return {
+        "timeframe": timeframe.lower(),
+        "last_candle_at": latest.ts.isoformat(),
+        "last_price": latest.close,
+        "bias": context["higher_timeframe_bias"],
+        "market_structure": context["market_structure"],
+        "price_above_ema200": context["price_above_ema200"],
+        "distance_from_ema_pct": context["distance_from_ema_pct"],
+    }
+
+
+def _consensus_bias(summaries: list[dict]) -> str:
+    biases = [str(item.get("bias") or "unknown").lower() for item in summaries]
+    directional = [item for item in biases if item in {"bullish", "bearish"}]
+    if not directional:
+        return "unknown"
+    if len(directional) != len(biases):
+        return "mixed"
+    if all(item == "bullish" for item in directional):
+        return "bullish"
+    if all(item == "bearish" for item in directional):
+        return "bearish"
+    return "mixed"
+
+
+def apply_higher_timeframe_context(
+    db: Session,
+    symbol: str,
+    timeframe: str,
+    market_context: dict,
+    limit: int = 250,
+) -> dict:
+    related_timeframes = HIGHER_TIMEFRAME_MAP.get(timeframe.lower(), [])
+    summaries = []
+    for higher_timeframe in related_timeframes:
+        candles = list(reversed(latest_candles(db, symbol, higher_timeframe, limit)))
+        if len(candles) < 20:
+            continue
+        summaries.append(_higher_timeframe_summary(candles, higher_timeframe))
+
+    if not summaries:
+        return {
+            **market_context,
+            "higher_timeframe_context": [],
+            "higher_timeframe_bias_source": "entry_timeframe_fallback",
+        }
+
+    consensus = _consensus_bias(summaries)
+    return {
+        **market_context,
+        "higher_timeframe_bias": consensus,
+        "higher_timeframe_context": summaries,
+        "higher_timeframe_bias_source": "+".join(item["timeframe"] for item in summaries),
+        "higher_timeframe_agreement": "aligned" if consensus in {"bullish", "bearish"} else consensus,
+    }
+
+
 def upsert_candle(db: Session, payload) -> MarketCandle:
     symbol = payload.symbol.upper()
     timeframe = payload.timeframe.lower()
@@ -186,7 +252,12 @@ def market_snapshot(db: Session, symbol: str, timeframe: str = "5m", limit: int 
         }
 
     latest = candles[-1]
-    market_context = candle_market_context(symbol, timeframe, candles)
+    market_context = apply_higher_timeframe_context(
+        db,
+        symbol,
+        timeframe,
+        candle_market_context(symbol, timeframe, candles),
+    )
     return {
         "symbol": market_context["symbol"],
         "timeframe": timeframe.lower(),

@@ -27,6 +27,8 @@ BankNifty uses the same Veda/JustNifty framework as Nifty, but it needs a separa
 - If price is extended but still inside the BankNifty threshold, Veda may continue evaluating the setup rather than blocking solely due to extension.
 - If price is at a channel or envelope extreme, prefer part booking or waiting for a pullback rather than fresh chase entries.
 - Use price-action invalidation for paper stops: recent structure high for shorts, recent structure low for longs, with the same part-book/trail exit plan used for Nifty.
+- For 5-minute entries, use the 15-minute and 1-hour Dhan contexts as the higher-timeframe filter. If they conflict, classify the setup as mixed and wait.
+- Even when 15-minute and 1-hour context are bearish or bullish together, do not enter until the 5-minute chart confirms the matching LH/LL or HH/HL entry structure.
 
 ## Validation Focus
 
@@ -34,3 +36,4 @@ BankNifty uses the same Veda/JustNifty framework as Nifty, but it needs a separa
 - Track false positives in low-ADX BankNifty sessions.
 - Track whether the 2.0 percent EMA-extension threshold is too loose or too strict.
 - Track whether 5-minute 200 EMA gives cleaner BankNifty bias than 1-minute 200 EMA.
+- Track cases where higher-timeframe alignment existed but the entry timeframe had not yet formed clean structure.

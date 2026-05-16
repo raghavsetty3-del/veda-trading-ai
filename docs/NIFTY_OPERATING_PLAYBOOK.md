@@ -57,6 +57,8 @@ Preferred fields:
 
 In the automated paper-trading path, `long_bias` and `short_bias` are treated as tradable setup signals only when price action structure, 200 EMA direction, LRHR retracement, and higher-timeframe direction are aligned. LRHR retracement is implemented as the 38.2 to 78.6 zone; shallower pullbacks are treated as chase risk.
 
+For 5-minute execution, Veda now reads 15-minute and 1-hour Dhan candles as the higher-timeframe context. If those timeframes conflict, the higher-timeframe bias is `mixed` and the system waits. Higher-timeframe alignment still does not replace entry-timeframe price action; the entry chart must show HH/HL for longs or LH/LL for shorts.
+
 ## Fresh Entry Checklist
 
 - Price action supports direction.
@@ -64,7 +66,7 @@ In the automated paper-trading path, `long_bias` and `short_bias` are treated as
 - Retracement is in the 38.2 to 78.6 LRHR zone.
 - Entry is near retracement, EMA, trendline, channel, or support/resistance confluence.
 - Price is not too extended from the relevant EMA.
-- Higher timeframe context is known.
+- Higher timeframe context is known and aligned.
 - Emotional state is calm.
 - Stop and invalidation are known before entry.
 
