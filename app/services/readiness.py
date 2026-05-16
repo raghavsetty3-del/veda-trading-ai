@@ -307,6 +307,7 @@ def _parallel_workstreams(
     provider_counts_ready = all(count >= 100 for count in provider_candle_counts.values())
     external_alert_ready = bool(os.getenv("HEALTHWATCH_WEBHOOK_URL"))
     blog_ready = bool(settings.blog_feeds)
+    telegram_ready = telegram["configured"] or (telegram.get("public_web") or {}).get("configured", False)
     backup_ready = restore_drill is not None and offsite_backup is not None
 
     return [
@@ -352,13 +353,13 @@ def _parallel_workstreams(
         },
         {
             "workstream": "Telegram live ingestion",
-            "status": "done" if telegram["configured"] else "input_needed",
+            "status": "done" if telegram_ready else "input_needed",
             "owner": "user",
-            "blocked_by": None if telegram["configured"] else "Telegram credentials and channel list",
-            "inputs_needed": telegram["missing"],
+            "blocked_by": None if telegram_ready else "Telegram API credentials or public channel links",
+            "inputs_needed": [] if telegram_ready else telegram["missing"] + ["TELEGRAM_PUBLIC_CHANNELS"],
             "can_complete_before_paper_gate": True,
-            "next_action": "Configure credentials after my.telegram.org rate limit clears, then run live ingestion.",
-            "detail": "Export ingestion already works; live listener waits for credentials.",
+            "next_action": "Use public web ingestion for public channels, or configure API credentials after my.telegram.org rate limit clears.",
+            "detail": f"Export ingestion works; public web configured={(telegram.get('public_web') or {}).get('configured', False)}; API listener configured={telegram['configured']}.",
         },
         {
             "workstream": "Blog/RSS ingestion",
@@ -433,6 +434,7 @@ def build_readiness_report(db: Session) -> dict:
         "market_provider_ingest": _latest_audit(db, "market.provider_ingest_configured"),
         "source_extraction": _latest_audit(db, "extraction.scheduled_process_pending") or _latest_audit(db, "extraction.process_pending"),
         "blog_ingest": _latest_audit(db, "blog.configured_ingest"),
+        "telegram_public_ingest": _latest_audit(db, "telegram.public_ingested"),
         "x_ingest": _latest_audit(db, "x.configured_ingest"),
     }
     kill_switch = get_kill_switch(db)
@@ -504,8 +506,11 @@ def build_readiness_report(db: Session) -> dict:
         {
             "gate": "telegram_configured",
             "required": False,
-            "ready": telegram["configured"],
-            "detail": f"Missing: {telegram['missing']}",
+            "ready": telegram["configured"] or (telegram.get("public_web") or {}).get("configured", False),
+            "detail": (
+                f"API missing: {telegram['missing']}; "
+                f"public web configured={(telegram.get('public_web') or {}).get('configured', False)}"
+            ),
         },
         {
             "gate": "x_configured",
@@ -531,8 +536,9 @@ def build_readiness_report(db: Session) -> dict:
     dhan = market_status.get("dhan", {})
     if dhan.get("source_count") and not dhan.get("configured"):
         missing_required_inputs.extend(dhan.get("missing", []))
-    if not telegram["configured"]:
+    if not (telegram["configured"] or (telegram.get("public_web") or {}).get("configured", False)):
         optional_missing_inputs.extend(telegram["missing"])
+        optional_missing_inputs.append("TELEGRAM_PUBLIC_CHANNELS")
     if not x_sources["configured"]:
         optional_missing_inputs.extend(x_sources["missing"])
     if not extraction["openai_key_present"]:

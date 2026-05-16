@@ -46,6 +46,41 @@ Optional:
 
 Without a bot token, the VM must already have an authorized Telethon user session file under `TELEGRAM_SESSION_DIR`.
 
+## Public Channel Web Ingestion
+
+If `my.telegram.org` is rate-limited or failing, public Telegram channels can be ingested without API credentials through Telegram's public web view.
+
+Configure:
+
+- `TELEGRAM_PUBLIC_CHANNELS`
+- `TELEGRAM_PUBLIC_INGEST_INTERVAL_SECONDS`
+- `TELEGRAM_PUBLIC_INGEST_LIMIT`
+- `TELEGRAM_PUBLIC_INGEST_ON_START`
+
+Accepted channel formats:
+
+```text
+@channelname
+https://t.me/channelname
+https://t.me/s/channelname
+```
+
+Run once:
+
+```bash
+curl -X POST http://localhost:8000/ingest/telegram/public \
+  -H "Content-Type: application/json" \
+  -d '{"channels": ["https://t.me/s/channelname"], "limit": 50}'
+```
+
+Run configured channels:
+
+```bash
+curl -X POST http://localhost:8000/ingest/telegram/public-configured
+```
+
+This path only works for public channels whose posts are visible at `https://t.me/s/<channel>`. Private groups or channels still need the API/session path or a manual export.
+
 From the laptop, use the integration helper after the Telegram rate limit clears:
 
 ```powershell

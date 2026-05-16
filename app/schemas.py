@@ -205,6 +205,11 @@ class TelegramLiveIngestRequest(BaseModel):
     limit: int | None = None
 
 
+class TelegramPublicIngestRequest(BaseModel):
+    channels: list[str] | None = None
+    limit: int | None = None
+
+
 class XIngestRequest(BaseModel):
     usernames: list[str] | None = None
     limit: int | None = None

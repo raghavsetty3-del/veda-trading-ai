@@ -51,6 +51,19 @@ if st.button("Run Live Telegram Ingestion"):
     r = requests.post(f"{API_BASE}/ingest/telegram/live", json=payload, timeout=120)
     st.write(r.json())
 
+st.subheader("Public Telegram")
+public_status = telegram_status.get("public_web", {})
+st.write(public_status)
+public_limit = st.number_input("Public Telegram Limit", min_value=1, max_value=100, value=int(public_status.get("ingest_limit", 50)))
+public_channels = st.text_input("Public Channel Override", value="")
+if st.button("Run Public Telegram Ingestion"):
+    payload = {
+        "limit": int(public_limit),
+        "channels": [item.strip() for item in public_channels.split(",") if item.strip()] or None,
+    }
+    r = requests.post(f"{API_BASE}/ingest/telegram/public", json=payload, timeout=120)
+    st.write(r.json())
+
 st.subheader("X/Twitter")
 x_status = requests.get(f"{API_BASE}/ingest/x/status", timeout=8).json()
 st.write(x_status)

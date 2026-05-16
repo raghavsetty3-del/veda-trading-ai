@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 
 from app.config import settings
+from app.ingestion.telegram_public import public_telegram_status
 
 
 def configured_channels() -> list[str]:
@@ -37,6 +38,7 @@ def telegram_status() -> dict:
         "telethon_available": telethon_available(),
         "channels": channels,
         "ingest_limit": settings.telegram_ingest_limit,
+        "public_web": public_telegram_status(),
     }
 
 

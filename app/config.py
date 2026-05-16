@@ -54,6 +54,10 @@ class Settings(BaseSettings):
     telegram_session_dir: str = "/app/data/telegram"
     telegram_channels: str | None = None
     telegram_ingest_limit: int = 50
+    telegram_public_channels: str | None = None
+    telegram_public_ingest_interval_seconds: int = 3600
+    telegram_public_ingest_limit: int = 50
+    telegram_public_ingest_on_start: bool = False
 
     x_bearer_token: str | None = None
     x_usernames: str | None = None

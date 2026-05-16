@@ -6,12 +6,15 @@ from app.services.blog_ingestion import configured_blog_feeds, ingest_configured
 from app.services.knowledge_extraction import process_pending_sources
 from app.services.market_provider import has_configured_market_sources, ingest_configured_market_sources
 from app.services.paper_scheduler import configured_paper_symbols, run_scheduled_paper_trading
+from app.services.telegram_public_ingestion import ingest_configured_public_telegram
+from app.ingestion.telegram_public import configured_public_channels
 from app.services.x_ingestion import configured_x_usernames, ingest_configured_x_usernames
 
 
 def main():
     last_heartbeat = 0.0
     last_blog_ingest = 0.0 if settings.blog_ingest_on_start else time.time()
+    last_telegram_public_ingest = 0.0 if settings.telegram_public_ingest_on_start else time.time()
     last_x_ingest = 0.0 if settings.x_ingest_on_start else time.time()
     last_source_extraction = 0.0 if settings.source_extraction_on_start else time.time()
     last_market_ingest = 0.0 if settings.market_data_ingest_on_start else time.time()
@@ -26,6 +29,9 @@ def main():
             if configured_blog_feeds() and now - last_blog_ingest >= settings.blog_ingest_interval_seconds:
                 ingest_configured_blog_feeds(db)
                 last_blog_ingest = now
+            if configured_public_channels() and now - last_telegram_public_ingest >= settings.telegram_public_ingest_interval_seconds:
+                ingest_configured_public_telegram(db)
+                last_telegram_public_ingest = now
             if configured_x_usernames() and settings.x_bearer_token and now - last_x_ingest >= settings.x_ingest_interval_seconds:
                 ingest_configured_x_usernames(db)
                 last_x_ingest = now
