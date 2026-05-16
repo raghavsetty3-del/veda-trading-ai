@@ -359,7 +359,10 @@ def _merge_extractions(base: dict, ai: dict | None) -> dict:
     ai_chart = ((ai.get("expected_conditions") or {}).get("chart_analysis") or {})
     if base_chart or ai_chart:
         chart = {**base_chart, **ai_chart}
-        chart["image_count"] = max(int(base_chart.get("image_count") or 0), int(ai_chart.get("image_count") or 0))
+        if ai_chart:
+            chart["image_count"] = int(ai_chart.get("image_count") or 0)
+        else:
+            chart["image_count"] = int(base_chart.get("image_count") or 0)
         chart["has_chart_context"] = bool(base_chart.get("has_chart_context") or ai_chart.get("has_chart_context"))
         chart["caveats"] = unique_urls([*(base_chart.get("caveats") or []), *(ai_chart.get("caveats") or [])])
         merged["expected_conditions"]["chart_analysis"] = chart
