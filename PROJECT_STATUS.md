@@ -25,6 +25,7 @@ Last updated: 2026-05-16
 - BANKNIFTY sell side is the weakest replay pocket: profit factor 1.626, max drawdown 2024.03 points.
 - BANKNIFTY sell-side quick tuning screen: best starter candidate uses part-book fraction 0.6 and trail lookback 2, improving 100-trade screened sell drawdown by 404.81 points and sell profit factor from 1.331 to 1.602.
 - BANKNIFTY best-candidate 500-trade replay: profit factor 2.348, net 26602.07 points, max drawdown 1619.22 points; sell-side profit factor 1.972 across 219 sell trades.
+- BANKNIFTY full-grid top 500-trade replay: part-book R 1.25, part-book fraction 0.6, trail lookback 3; profit factor 2.45, net 31200.27 points, max drawdown 1619.22 points; sell-side profit factor 1.985 across 234 sell trades.
 - Forward paper evidence is not ready yet: NIFTY has 1 closed paper trade; BANKNIFTY has 0 closed paper trades.
 
 ## Pending
@@ -32,7 +33,7 @@ Last updated: 2026-05-16
 - Wait for regular market sessions to collect at least 20 closed forward paper trades per symbol.
 - Confirm forward paper P&L remains positive for NIFTY and BANKNIFTY.
 - Finish processing the remaining blog/chart extraction backlog.
-- Finish the larger BANKNIFTY sell-side tuning grid before promoting any parameter change.
+- Review full-grid BANKNIFTY tuning evidence before promoting any parameter change to scheduled paper trading.
 - Keep validating chart-image extraction quality against the author's chart annotations.
 - Push any local commits that require laptop SSH passphrase entry.
 
@@ -45,6 +46,6 @@ Last updated: 2026-05-16
 ## Next Actions That Do Not Depend On Market Sessions
 
 - Review the new Replay Risk Report dashboard page after deployment.
-- Run the larger BANKNIFTY sell-side tuning grid after the first-pass candidate is reviewed.
+- Add paper-setting promotion controls after the full-grid BANKNIFTY candidate is manually reviewed.
 - Add a dashboard view for tuning candidates if the first sweep produces useful alternatives.
 - Continue chart extraction and author-mechanism enrichment in the background.
