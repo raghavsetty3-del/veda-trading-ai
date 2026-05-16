@@ -44,17 +44,40 @@ def extract_symbols(text: str | None) -> list[str]:
     return symbols
 
 
+def normalize_timeframe(value: str | None) -> str | None:
+    if value is None:
+        return None
+    raw = str(value).strip()
+    if not raw:
+        return None
+    lower = raw.lower()
+    if any(token in lower for token in ["multi", "multiple", "intraday frames", "daily and intraday"]):
+        return "multi-timeframe"
+    aliases = [
+        (r"\b(1m|1[- ]?min(?:ute)?s?)\b", "1m"),
+        (r"\b(3m|3[- ]?min(?:ute)?s?)\b", "3m"),
+        (r"\b(5m|5[- ]?min(?:ute)?s?)\b", "5m"),
+        (r"\b(15m|15[- ]?min(?:ute)?s?)\b", "15m"),
+        (r"\b(30m|30[- ]?min(?:ute)?s?)\b", "30m"),
+        (r"\b(60m|60[- ]?min(?:ute)?s?|1h|1[- ]?hour|hourly)\b", "1h"),
+        (r"\b(1d|daily|day)\b", "1d"),
+        (r"\b(1w|weekly|week)\b", "1w"),
+        (r"\b(1mo|monthly|month)\b", "1mo"),
+    ]
+    matches = [code for pattern, code in aliases if re.search(pattern, lower)]
+    if len(set(matches)) > 1:
+        return "multi-timeframe"
+    if matches:
+        return matches[0]
+    return raw[:50]
+
+
 def extract_timeframe(text: str | None) -> str | None:
     lower = _lower(text)
-    match = re.search(r"\b(1m|3m|5m|15m|30m|1h|1d|daily|weekly)\b", lower)
+    match = re.search(r"\b(1m|3m|5m|15m|30m|60m|1h|1d|daily|weekly|monthly|hourly)\b", lower)
     if not match:
         return None
-    value = match.group(1)
-    if value == "daily":
-        return "1d"
-    if value == "weekly":
-        return "1w"
-    return value
+    return normalize_timeframe(match.group(1))
 
 
 def extract_concepts(text: str | None) -> list[str]:
@@ -93,7 +116,10 @@ OPENAI_EXTRACTION_SCHEMA = {
     "additionalProperties": False,
     "properties": {
         "bias": {"type": ["string", "null"], "enum": ["bullish", "bearish", "neutral", None]},
-        "timeframe": {"type": ["string", "null"]},
+        "timeframe": {
+            "type": ["string", "null"],
+            "description": "Use compact codes such as 5m, 15m, 30m, 1h, 1d, 1w, 1mo, or multi-timeframe.",
+        },
         "symbols": {"type": "array", "items": {"type": "string"}},
         "concepts": {"type": "array", "items": {"type": "string"}},
         "psychology": {
@@ -440,16 +466,31 @@ def _merge_extractions(base: dict, ai: dict | None) -> dict:
     return merged
 
 
+def _normalize_extracted_knowledge(extracted: dict) -> dict:
+    normalized = {**extracted}
+    raw_timeframe = normalized.get("timeframe")
+    compact_timeframe = normalize_timeframe(raw_timeframe)
+    if raw_timeframe and compact_timeframe != raw_timeframe:
+        conditions = {**(normalized.get("expected_conditions") or {})}
+        conditions["raw_timeframe_phrase"] = str(raw_timeframe)[:300]
+        normalized["expected_conditions"] = conditions
+    normalized["timeframe"] = compact_timeframe
+    bias = normalized.get("bias")
+    if bias is not None:
+        normalized["bias"] = str(bias).strip()[:50] or None
+    return normalized
+
+
 def extract_knowledge(text: str | None, media_urls: list[str] | None = None) -> dict:
     base = extract_deterministic_knowledge(text, media_urls)
     try:
-        return _merge_extractions(base, extract_openai_knowledge(text, media_urls))
+        return _normalize_extracted_knowledge(_merge_extractions(base, extract_openai_knowledge(text, media_urls)))
     except Exception as exc:
         base["expected_conditions"] = {
             **base.get("expected_conditions", {}),
             "openai_extraction_error": str(exc)[:200],
         }
-        return base
+        return _normalize_extracted_knowledge(base)
 
 
 def process_source(db: Session, source_id: int) -> dict | None:
@@ -500,7 +541,7 @@ def process_pending_sources(db: Session, limit: int = 50) -> dict:
     sources = (
         db.query(SourceDocument)
         .filter_by(processed=False)
-        .order_by(SourceDocument.ingested_at.asc())
+        .order_by(SourceDocument.media_paths.is_(None), SourceDocument.ingested_at.asc())
         .limit(safe_limit)
         .all()
     )
