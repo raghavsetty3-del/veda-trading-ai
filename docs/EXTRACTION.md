@@ -2,7 +2,7 @@
 
 The extraction workbench converts archived source text into structured insight records.
 
-Current extraction is deterministic and local:
+Extraction is deterministic by default and can be enriched with OpenAI when `OPENAI_EXTRACTION_ENABLED=true` and `OPENAI_API_KEY` is configured:
 
 - Symbols: `NIFTY`, `BANKNIFTY`
 - Timeframe hints: `5m`, `15m`, `1h`, `1d`, etc.
@@ -18,4 +18,12 @@ curl -X POST "http://localhost:8000/extraction/process-pending?limit=50"
 
 This marks source documents as processed and writes `ExtractedInsight` rows.
 
-OpenAI-assisted extraction can be added later by replacing or enriching this deterministic extractor while preserving the same output shape.
+The scheduler can also process pending source documents automatically:
+
+```text
+SOURCE_EXTRACTION_INTERVAL_SECONDS=1800
+SOURCE_EXTRACTION_LIMIT=25
+SOURCE_EXTRACTION_ON_START=false
+```
+
+This keeps newly ingested RSS, Telegram, or manually archived source material flowing into insights and rule suggestions without changing live trading settings.

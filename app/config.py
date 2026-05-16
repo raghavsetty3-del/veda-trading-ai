@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     blog_ingest_limit: int = 20
     blog_ingest_on_start: bool = False
 
+    source_extraction_interval_seconds: int = 1800
+    source_extraction_limit: int = 25
+    source_extraction_on_start: bool = False
+
     market_data_sources: str | None = None
     market_data_ingest_interval_seconds: int = 900
     market_data_ingest_limit: int = 10000

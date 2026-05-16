@@ -3,6 +3,7 @@ from app.config import settings
 from app.db import SessionLocal
 from app.services.audit import audit
 from app.services.blog_ingestion import configured_blog_feeds, ingest_configured_blog_feeds
+from app.services.knowledge_extraction import process_pending_sources
 from app.services.market_provider import has_configured_market_sources, ingest_configured_market_sources
 from app.services.paper_scheduler import configured_paper_symbols, run_scheduled_paper_trading
 
@@ -10,6 +11,7 @@ from app.services.paper_scheduler import configured_paper_symbols, run_scheduled
 def main():
     last_heartbeat = 0.0
     last_blog_ingest = 0.0 if settings.blog_ingest_on_start else time.time()
+    last_source_extraction = 0.0 if settings.source_extraction_on_start else time.time()
     last_market_ingest = 0.0 if settings.market_data_ingest_on_start else time.time()
     last_paper_run = 0.0 if settings.paper_trading_on_start else time.time()
     while True:
@@ -22,6 +24,16 @@ def main():
             if configured_blog_feeds() and now - last_blog_ingest >= settings.blog_ingest_interval_seconds:
                 ingest_configured_blog_feeds(db)
                 last_blog_ingest = now
+            if now - last_source_extraction >= settings.source_extraction_interval_seconds:
+                result = process_pending_sources(db, limit=settings.source_extraction_limit)
+                if result["seen"] or result["processed"]:
+                    audit(
+                        db,
+                        "extraction.scheduled_process_pending",
+                        "Processed pending source documents from scheduler",
+                        payload={"processed": result["processed"], "seen": result["seen"]},
+                    )
+                last_source_extraction = now
             if has_configured_market_sources() and now - last_market_ingest >= settings.market_data_ingest_interval_seconds:
                 ingest_configured_market_sources(db)
                 last_market_ingest = now
