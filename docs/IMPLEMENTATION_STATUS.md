@@ -50,6 +50,8 @@ Date: 2026-05-16
 - Paper trades now use author-aligned price-action invalidation stops rather than generic percentage stops.
 - Paper exits now support the author-backed part-book-and-trail plan: book part when price moves in favor, move the balance to a trailing stop, and let structure manage the rest.
 - Historical paper replay is available for non-live provider-backed outcome checks; author-style part-book/trail replay improved both NIFTY and BANKNIFTY risk-adjusted results.
+- Historical paper replay and stored-candle replay now use timestamp-correct 15-minute and 1-hour higher-timeframe context, avoiding lookahead while matching live paper evaluation.
+- Backtest Replay dashboard exposes historical paper replay with author-style part-book/trail metrics.
 - Paper-trading observations and closed-trade P&L can now create validation evidence cases.
 - Strategy trade-export CSVs can now create performance validation evidence cases.
 - Failed trade-export evidence can be reviewed as not promoted while preserving the failed result.

@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.services.market_data import candle_market_context, latest_candles
+from app.services.market_data import apply_higher_timeframe_context, candle_market_context, latest_candles
 from app.services.paper_trading import build_paper_trade_plan
 
 
@@ -187,7 +187,14 @@ def evaluate_historical_paper_replay(db: Session, payload) -> dict:
     index = min_window
     while index < len(candles) - 1 and len(trades) < max_trades:
         window = candles[index - min_window:index]
-        context = candle_market_context(payload.symbol, payload.timeframe, window)
+        entry_at = window[-1].ts
+        context = apply_higher_timeframe_context(
+            db,
+            payload.symbol,
+            payload.timeframe,
+            candle_market_context(payload.symbol, payload.timeframe, window),
+            anchor_ts=entry_at,
+        )
         plan = build_paper_trade_plan(db, ReplayPayload(payload.symbol, payload.timeframe, context, quantity))
         if plan["side"] == "none":
             stance = plan["setup"]["stance"]
@@ -206,7 +213,6 @@ def evaluate_historical_paper_replay(db: Session, payload) -> dict:
             )
         else:
             exit_result = _exit_from_future(plan, future_candles)
-        entry_at = window[-1].ts
         trade = {
             "symbol": plan["market_context"]["symbol"],
             "timeframe": payload.timeframe.lower(),
@@ -218,6 +224,8 @@ def evaluate_historical_paper_replay(db: Session, payload) -> dict:
             "target": plan["target"],
             "matched_rules": plan["setup"].get("matched_rules", []),
             "failed_rules": plan["setup"].get("failed_rules", []),
+            "higher_timeframe_bias": plan["market_context"].get("higher_timeframe_bias"),
+            "higher_timeframe_bias_source": plan["market_context"].get("higher_timeframe_bias_source"),
         }
         if exit_result:
             realized_pnl = exit_result["realized_pnl"]

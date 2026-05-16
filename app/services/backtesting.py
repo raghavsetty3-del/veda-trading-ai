@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 
 from app.models import RuleMapping
 from app.services.instrument_profiles import apply_instrument_profile
-from app.services.market_data import candle_market_context, latest_candles
+from app.services.market_data import apply_higher_timeframe_context, candle_market_context, latest_candles
 from app.services.rules import evaluate_rule, evaluate_setup
 
 
@@ -70,7 +70,14 @@ def evaluate_candle_backtest(db: Session, payload) -> dict:
     for index in range(min_window, len(candles) + 1):
         window = candles[index - min_window:index]
         latest = window[-1]
-        steps.append(Step(latest.ts.isoformat(), candle_market_context(payload.symbol, payload.timeframe, window)))
+        context = apply_higher_timeframe_context(
+            db,
+            payload.symbol,
+            payload.timeframe,
+            candle_market_context(payload.symbol, payload.timeframe, window),
+            anchor_ts=latest.ts,
+        )
+        steps.append(Step(latest.ts.isoformat(), context))
 
     replay_payload = type("ReplayPayload", (), {
         "name": payload.name,

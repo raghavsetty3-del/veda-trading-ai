@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.models import MarketCandle
@@ -140,11 +142,23 @@ def apply_higher_timeframe_context(
     timeframe: str,
     market_context: dict,
     limit: int = 250,
+    anchor_ts: datetime | None = None,
 ) -> dict:
     related_timeframes = HIGHER_TIMEFRAME_MAP.get(timeframe.lower(), [])
     summaries = []
     for higher_timeframe in related_timeframes:
-        candles = list(reversed(latest_candles(db, symbol, higher_timeframe, limit)))
+        if anchor_ts:
+            higher_rows = (
+                db.query(MarketCandle)
+                .filter_by(symbol=symbol.upper(), timeframe=higher_timeframe.lower())
+                .filter(MarketCandle.ts <= anchor_ts)
+                .order_by(MarketCandle.ts.desc())
+                .limit(max(1, min(limit, MAX_CANDLE_QUERY_LIMIT)))
+                .all()
+            )
+            candles = list(reversed(higher_rows))
+        else:
+            candles = list(reversed(latest_candles(db, symbol, higher_timeframe, limit)))
         if len(candles) < 20:
             continue
         summaries.append(_higher_timeframe_summary(candles, higher_timeframe))

@@ -76,6 +76,8 @@ if st.button("Run Replay"):
                     "long_score": item["setup"]["long_score"],
                     "short_score": item["setup"]["short_score"],
                     "risk_flags": len(item["setup"]["risk_flags"]),
+                    "htf_bias": item["setup"]["market_context"].get("higher_timeframe_bias"),
+                    "htf_source": item["setup"]["market_context"].get("higher_timeframe_bias_source"),
                 }
                 for item in result["results"]
             ]
@@ -127,3 +129,44 @@ if st.button("Save Stored Candle Replay as Validation"):
     result = post("/validation/from-candle-replay", payload)
     if result:
         st.json(result)
+
+st.subheader("Historical Paper Replay")
+paper_limit = st.number_input("Paper Replay Candle Limit", min_value=250, max_value=10000, value=1500, step=250)
+paper_min_window = st.number_input("Paper Replay Minimum Window", min_value=20, max_value=500, value=200, step=10)
+paper_max_trades = st.number_input("Paper Replay Max Trades", min_value=1, max_value=500, value=100, step=10)
+paper_cooldown = st.number_input("Paper Replay Cooldown Candles", min_value=0, max_value=50, value=5, step=1)
+paper_include_trades = st.checkbox("Include Trade Rows", value=False)
+if st.button("Run Historical Paper Replay"):
+    result = post(
+        "/backtests/paper-replay",
+        {
+            "name": "dashboard-historical-paper-replay",
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "limit": int(paper_limit),
+            "min_window": int(paper_min_window),
+            "max_trades": int(paper_max_trades),
+            "cooldown_candles": int(paper_cooldown),
+            "exit_mode": "author_part_book_trail",
+            "part_book_r_multiple": 1.0,
+            "part_book_fraction": 0.5,
+            "trail_lookback_candles": 3,
+            "include_trades": paper_include_trades,
+        },
+    )
+    if result:
+        metrics = result.get("metrics", {})
+        cols = st.columns(5)
+        cols[0].metric("Trades", metrics.get("trades"))
+        cols[1].metric("Realized", metrics.get("realized_trades"))
+        cols[2].metric("Net P&L", metrics.get("net_realized_pnl"))
+        cols[3].metric("Profit Factor", metrics.get("profit_factor_label"))
+        cols[4].metric("Avg R", metrics.get("average_r_multiple"))
+        st.json({
+            "ready": result.get("ready"),
+            "source_candles": result.get("source_candles"),
+            "blocked_counts": result.get("blocked_counts"),
+            "metrics": metrics,
+        })
+        if result.get("trades"):
+            st.dataframe(pd.DataFrame(result["trades"]), use_container_width=True)
