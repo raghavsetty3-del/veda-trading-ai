@@ -106,6 +106,13 @@ def seed_defaults(db: Session):
             {"higher_timeframe_bias": "bearish", "market_structure": "sideways", "system_should": "wait_for_lh_ll_entry_structure"},
             "Validates that higher-timeframe bearishness alone does not create a short without entry-timeframe LH/LL price action.",
         ),
+        (
+            "VAL-JN-007",
+            "Invalidation must be predefined before entry",
+            "AP-004",
+            {"risk_points": "missing", "recent_structure_stop": "missing", "system_should": "wait_for_defined_risk"},
+            "Validates the author's guidance that loss/invalidation must be known before entry.",
+        ),
     ]
 
     for case_code, title, ap_code, expected_json, notes in validation_cases:

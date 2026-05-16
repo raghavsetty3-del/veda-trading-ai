@@ -23,6 +23,31 @@ def evaluate_rule(rule_logic: dict, market_context: dict) -> dict:
     return {"matched": not failed, "passed": passed, "failed": failed}
 
 
+def _positive_float(value) -> float | None:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    return numeric if numeric > 0 else None
+
+
+def _has_predefined_invalidation(market_context: dict, side: str) -> bool:
+    if _positive_float(market_context.get("risk_points")) is not None:
+        return True
+
+    last_price = _positive_float(market_context.get("last_price") or market_context.get("close"))
+    if last_price is None:
+        return False
+
+    if side == "long":
+        recent_low = _positive_float(market_context.get("recent_low"))
+        return recent_low is not None and recent_low < last_price
+    if side == "short":
+        recent_high = _positive_float(market_context.get("recent_high"))
+        return recent_high is not None and recent_high > last_price
+    return False
+
+
 def evaluate_setup(market_context: dict, rule_results: list[dict]) -> dict:
     matched = {item["rule_code"] for item in rule_results if item["matched"]}
     failed = {item["rule_code"] for item in rule_results if not item["matched"]}
@@ -92,6 +117,10 @@ def evaluate_setup(market_context: dict, rule_results: list[dict]) -> dict:
         and has_lrhr_retracement
         and higher_timeframe_bias == "bearish"
     )
+    if long_has_primary_confluence and not _has_predefined_invalidation(market_context, "long"):
+        risk_flags.append("No predefined price-action invalidation level for the long setup.")
+    if short_has_primary_confluence and not _has_predefined_invalidation(market_context, "short"):
+        risk_flags.append("No predefined price-action invalidation level for the short setup.")
 
     if risk_flags:
         stance = "wait"
