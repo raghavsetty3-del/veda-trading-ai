@@ -46,6 +46,34 @@ Optional:
 
 Without a bot token, the VM must already have an authorized Telethon user session file under `TELEGRAM_SESSION_DIR`.
 
+## Private Channel Bot API Ingestion
+
+If the Telegram channel is private and `my.telegram.org` keeps failing, use a Telegram bot instead.
+
+This does not require `TELEGRAM_API_ID` or `TELEGRAM_API_HASH`.
+
+Steps:
+
+1. Create a bot with BotFather and copy the bot token.
+2. Add the bot to the private channel as an admin.
+3. Configure `TELEGRAM_BOT_TOKEN`.
+4. Optionally configure `TELEGRAM_BOT_ALLOWED_CHATS` with the channel title, username, or chat id to filter updates.
+5. New channel posts after the bot is added can be ingested.
+
+Limitations:
+
+- Bot API does not backfill old private-channel history.
+- For old messages, use Telegram Desktop export and ingest the JSON export.
+- If the bot has an active webhook elsewhere, `getUpdates` may not receive messages until that webhook is cleared.
+
+Run once:
+
+```bash
+curl -X POST http://localhost:8000/ingest/telegram/bot \
+  -H "Content-Type: application/json" \
+  -d '{"limit": 100}'
+```
+
 ## Public Channel Web Ingestion
 
 If `my.telegram.org` is rate-limited or failing, public Telegram channels can be ingested without API credentials through Telegram's public web view.

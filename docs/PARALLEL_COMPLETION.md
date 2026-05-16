@@ -12,7 +12,7 @@ The five-session forward paper evidence gate should continue in the background. 
 - Timestamp-correct stored-candle replay and historical paper replay validation for NIFTY and BANKNIFTY.
 - OpenAI-assisted source extraction, deterministic extraction, rule suggestions, and validation evidence workflows.
 - Backup, offsite backup, restore drill, and local healthwatch auto-healing.
-- Public Telegram web ingestion for public channels when `my.telegram.org` API setup is blocked.
+- Telegram fallback ingestion: Bot API for private-channel new posts and public web ingestion for public channels when `my.telegram.org` API setup is blocked.
 - GitHub sync.
 
 ## Running In Background
@@ -29,7 +29,7 @@ These can be completed immediately after inputs are available:
 | Workstream | Needed Input | Current State | Completion After Input |
 | --- | --- | --- | --- |
 | External health alerts | `HEALTHWATCH_WEBHOOK_URL` | Healthwatch is built and logging locally | Add `.healthwatch.env`, restart timer, run healthwatch check |
-| Telegram ingestion | `TELEGRAM_PUBLIC_CHANNELS` for public channels, or `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_CHANNELS` for private/API access | Export, public web, and API listener paths are built | Configure channel list, run ingestion, process sources |
+| Telegram ingestion | `TELEGRAM_BOT_TOKEN` for private-channel new posts, `TELEGRAM_PUBLIC_CHANNELS` for public channels, or `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_CHANNELS` for full API access | Export, Bot API, public web, and API listener paths are built | Configure channel/token, run ingestion, process sources |
 | Blog/RSS ingestion | `BLOG_FEEDS` | Manual and scheduled RSS ingestion are built; JustNifty feeds are now configured | Keep scheduled ingest running and process new sources |
 | X/Twitter ingestion | `X_BEARER_TOKEN`, `X_USERNAMES` | Official X API v2 connector is built | Configure only user-approved accounts, run ingestion, process sources |
 | Shared-access security | Target users and access policy | Basic Auth is OK for personal use | Add stronger auth before wider sharing |

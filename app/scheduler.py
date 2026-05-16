@@ -6,6 +6,7 @@ from app.services.blog_ingestion import configured_blog_feeds, ingest_configured
 from app.services.knowledge_extraction import process_pending_sources
 from app.services.market_provider import has_configured_market_sources, ingest_configured_market_sources
 from app.services.paper_scheduler import configured_paper_symbols, run_scheduled_paper_trading
+from app.services.telegram_bot_ingestion import ingest_bot_telegram, telegram_bot_status
 from app.services.telegram_public_ingestion import ingest_configured_public_telegram
 from app.ingestion.telegram_public import configured_public_channels
 from app.services.x_ingestion import configured_x_usernames, ingest_configured_x_usernames
@@ -14,6 +15,7 @@ from app.services.x_ingestion import configured_x_usernames, ingest_configured_x
 def main():
     last_heartbeat = 0.0
     last_blog_ingest = 0.0 if settings.blog_ingest_on_start else time.time()
+    last_telegram_bot_ingest = 0.0 if settings.telegram_bot_ingest_on_start else time.time()
     last_telegram_public_ingest = 0.0 if settings.telegram_public_ingest_on_start else time.time()
     last_x_ingest = 0.0 if settings.x_ingest_on_start else time.time()
     last_source_extraction = 0.0 if settings.source_extraction_on_start else time.time()
@@ -29,6 +31,9 @@ def main():
             if configured_blog_feeds() and now - last_blog_ingest >= settings.blog_ingest_interval_seconds:
                 ingest_configured_blog_feeds(db)
                 last_blog_ingest = now
+            if telegram_bot_status()["configured"] and now - last_telegram_bot_ingest >= settings.telegram_bot_ingest_interval_seconds:
+                ingest_bot_telegram(db, limit=settings.telegram_bot_ingest_limit)
+                last_telegram_bot_ingest = now
             if configured_public_channels() and now - last_telegram_public_ingest >= settings.telegram_public_ingest_interval_seconds:
                 ingest_configured_public_telegram(db)
                 last_telegram_public_ingest = now

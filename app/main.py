@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, BlogBackfillRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperReplayBacktestRequest, PaperReplayValidationRequest, PaperSchedulerRunRequest, PaperTradeReconcileRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, TelegramLiveIngestRequest, TelegramPublicIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate, XIngestRequest
+from app.schemas import AuditEvent, BacktestRequest, BlogBackfillRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperReplayBacktestRequest, PaperReplayValidationRequest, PaperSchedulerRunRequest, PaperTradeReconcileRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramBotIngestRequest, TelegramExportIngestRequest, TelegramLiveIngestRequest, TelegramPublicIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate, XIngestRequest
 from app.services.audit import audit
 from app.services.angelone_market_data import angelone_status
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
@@ -32,6 +32,7 @@ from app.services.source_archive import archive_source_document
 from app.services.suggestions import promote_rule_suggestion, rule_suggestions
 from app.services.telegram_ingestion import ingest_telegram_export
 from app.services.telegram_live_ingestion import ingest_live_telegram
+from app.services.telegram_bot_ingestion import ingest_bot_telegram
 from app.services.telegram_public_ingestion import ingest_configured_public_telegram, ingest_public_telegram
 from app.services.trade_export_validation import create_trade_export_validation
 from app.services.validation_evidence import create_candle_replay_validation
@@ -463,6 +464,15 @@ def ingest_telegram_public_request(payload: TelegramPublicIngestRequest | None =
 def ingest_telegram_public_configured_request(db: Session = Depends(get_db)):
     try:
         return ingest_configured_public_telegram(db)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.post("/ingest/telegram/bot")
+def ingest_telegram_bot_request(payload: TelegramBotIngestRequest | None = None, db: Session = Depends(get_db)):
+    payload = payload or TelegramBotIngestRequest()
+    try:
+        return ingest_bot_telegram(db, limit=payload.limit)
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

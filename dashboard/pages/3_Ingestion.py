@@ -51,6 +51,14 @@ if st.button("Run Live Telegram Ingestion"):
     r = requests.post(f"{API_BASE}/ingest/telegram/live", json=payload, timeout=120)
     st.write(r.json())
 
+st.subheader("Telegram Bot API")
+bot_status = telegram_status.get("bot_api", {})
+st.write(bot_status)
+bot_limit = st.number_input("Bot API Telegram Limit", min_value=1, max_value=100, value=int(bot_status.get("ingest_limit", 100)))
+if st.button("Run Telegram Bot Ingestion"):
+    r = requests.post(f"{API_BASE}/ingest/telegram/bot", json={"limit": int(bot_limit)}, timeout=120)
+    st.write(r.json())
+
 st.subheader("Public Telegram")
 public_status = telegram_status.get("public_web", {})
 st.write(public_status)

@@ -210,6 +210,10 @@ class TelegramPublicIngestRequest(BaseModel):
     limit: int | None = None
 
 
+class TelegramBotIngestRequest(BaseModel):
+    limit: int | None = None
+
+
 class XIngestRequest(BaseModel):
     usernames: list[str] | None = None
     limit: int | None = None

@@ -14,6 +14,8 @@ This script updates deployment-only integration settings:
   - TELEGRAM_API_ID
   - TELEGRAM_API_HASH
   - TELEGRAM_CHANNELS
+  - TELEGRAM_BOT_TOKEN
+  - TELEGRAM_BOT_ALLOWED_CHATS
   - TELEGRAM_PUBLIC_CHANNELS
   - BLOG_FEEDS
   - X_BEARER_TOKEN
@@ -82,6 +84,8 @@ echo
 telegram_api_id="$(prompt_value "Telegram API ID" "$(current_value TELEGRAM_API_ID)")"
 telegram_api_hash="$(prompt_value "Telegram API hash" "$(current_value TELEGRAM_API_HASH)")"
 telegram_channels="$(prompt_value "Telegram channels, comma-separated" "$(current_value TELEGRAM_CHANNELS)")"
+telegram_bot_token="$(prompt_value "Telegram bot token" "$(current_value TELEGRAM_BOT_TOKEN)")"
+telegram_bot_allowed_chats="$(prompt_value "Telegram bot allowed chats, comma-separated" "$(current_value TELEGRAM_BOT_ALLOWED_CHATS)")"
 telegram_public_channels="$(prompt_value "Public Telegram channels, comma-separated" "$(current_value TELEGRAM_PUBLIC_CHANNELS)")"
 blog_feeds="$(prompt_value "Blog/RSS feeds, comma-separated" "$(current_value BLOG_FEEDS)")"
 x_bearer_token="$(prompt_value "X API bearer token" "$(current_value X_BEARER_TOKEN)")"
@@ -91,6 +95,9 @@ healthwatch_webhook="$(prompt_value "Healthwatch webhook URL" "")"
 set_env_value TELEGRAM_API_ID "$telegram_api_id" "$ENV_FILE"
 set_env_value TELEGRAM_API_HASH "$telegram_api_hash" "$ENV_FILE"
 set_env_value TELEGRAM_CHANNELS "$telegram_channels" "$ENV_FILE"
+set_env_value TELEGRAM_BOT_TOKEN "$telegram_bot_token" "$ENV_FILE"
+set_env_value TELEGRAM_BOT_ALLOWED_CHATS "$telegram_bot_allowed_chats" "$ENV_FILE"
+set_env_value TELEGRAM_BOT_INGEST_ON_START "true" "$ENV_FILE"
 set_env_value TELEGRAM_PUBLIC_CHANNELS "$telegram_public_channels" "$ENV_FILE"
 set_env_value TELEGRAM_PUBLIC_INGEST_ON_START "true" "$ENV_FILE"
 set_env_value BLOG_FEEDS "$blog_feeds" "$ENV_FILE"
