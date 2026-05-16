@@ -16,6 +16,7 @@ Last updated: 2026-05-16
 - Historical replay validation is saved for NIFTY and BANKNIFTY.
 - Replay risk reporting is generated with drawdown, monthly, side-wise, regime, and structure breakdowns.
 - A dashboard page now surfaces replay risk reports without opening JSON or CSV files.
+- A dashboard page now surfaces BANKNIFTY tuning reports and top candidates without opening JSON files.
 - BANKNIFTY sell-side replay-only tuning has started with a parameter sweep script; it does not change live or paper settings.
 
 ## Current Evidence

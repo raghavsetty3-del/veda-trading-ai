@@ -92,3 +92,64 @@ def latest_replay_risk_report(name: str | None = None) -> dict[str, Any]:
         }
 
     return _load_report(files[0])
+
+
+def list_banknifty_tuning_reports() -> dict[str, Any]:
+    files = _report_files("banknifty_sell_tuning_*.json")
+    if not files:
+        return {
+            "available": False,
+            "searched_paths": [str(path) for path in REPORT_DIRS],
+            "items": [],
+        }
+
+    items = []
+    for path in files:
+        try:
+            report = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        top = (report.get("top_candidates") or [{}])[0]
+        sell = top.get("sell") or {}
+        items.append({
+            "name": path.name,
+            "path": str(path),
+            "updated_at": datetime.utcfromtimestamp(path.stat().st_mtime).isoformat(),
+            "generated_at": report.get("generated_at"),
+            "mode": report.get("mode"),
+            "purpose": report.get("purpose"),
+            "baseline_sell": report.get("baseline_sell") or {},
+            "top_candidate": top,
+            "top_sell_profit_factor": sell.get("profit_factor_label"),
+            "top_sell_drawdown": sell.get("max_drawdown_points"),
+            "top_sell_net_points": sell.get("net_points"),
+            "candidate_count": len(report.get("results") or []),
+        })
+    return {
+        "available": bool(items),
+        "items": items,
+    }
+
+
+def banknifty_tuning_report(name: str | None = None) -> dict[str, Any]:
+    files = _report_files("banknifty_sell_tuning_*.json")
+    if not files:
+        return {
+            "available": False,
+            "searched_paths": [str(path) for path in REPORT_DIRS],
+            "report": None,
+        }
+
+    if name:
+        safe_name = Path(name).name
+        for path in files:
+            if path.name == safe_name:
+                return _load_report(path)
+        return {
+            "available": False,
+            "searched_paths": [str(path) for path in REPORT_DIRS],
+            "report": None,
+            "error": f"BANKNIFTY tuning report not found: {safe_name}",
+        }
+
+    return _load_report(files[0])

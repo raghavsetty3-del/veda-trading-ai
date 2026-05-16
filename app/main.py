@@ -21,7 +21,7 @@ from app.services.paper_replay import evaluate_historical_paper_replay
 from app.services.paper_trading import create_paper_trade, list_paper_trades, paper_performance_metrics, reconcile_open_paper_trades, update_paper_trade_status
 from app.services.paper_replay_validation import create_paper_replay_validation
 from app.services.paper_validation import create_paper_trade_validation
-from app.services.replay_reports import latest_replay_risk_report, list_replay_risk_reports
+from app.services.replay_reports import banknifty_tuning_report, latest_replay_risk_report, list_banknifty_tuning_reports, list_replay_risk_reports
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.readiness import build_readiness_report
 from app.services.rule_evidence import build_rule_activation_evidence
@@ -90,6 +90,16 @@ def replay_risk_report_latest(name: str | None = None):
 @app.get("/reports/replay-risk")
 def replay_risk_reports():
     return list_replay_risk_reports()
+
+
+@app.get("/reports/banknifty-tuning")
+def banknifty_tuning_reports():
+    return list_banknifty_tuning_reports()
+
+
+@app.get("/reports/banknifty-tuning/latest")
+def banknifty_tuning_latest(name: str | None = None):
+    return banknifty_tuning_report(name=name)
 
 
 @app.get("/principles")
