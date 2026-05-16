@@ -106,6 +106,39 @@ def _source_archive_summary(db: Session) -> dict:
     processed = db.query(SourceDocument).filter(SourceDocument.processed.is_(True)).count()
     full_insights = db.query(ExtractedInsight).filter(ExtractedInsight.confidence.isnot(None)).count()
     preview_insights = db.query(ExtractedInsight).filter(ExtractedInsight.confidence.is_(None)).count()
+    media_scanned_sources = 0
+    media_pending_scan_sources = 0
+    media_url_total = 0
+    chart_backed_sources = 0
+    chart_backed_pending_extraction = 0
+    for media_paths, processed_flag, raw_html in db.query(
+        SourceDocument.media_paths,
+        SourceDocument.processed,
+        SourceDocument.raw_html,
+    ).all():
+        if media_paths is None:
+            if raw_html is not None:
+                media_pending_scan_sources += 1
+            continue
+        media_scanned_sources += 1
+        media_count = len(media_paths) if isinstance(media_paths, list) else 0
+        media_url_total += media_count
+        if media_count:
+            chart_backed_sources += 1
+            if not processed_flag:
+                chart_backed_pending_extraction += 1
+    chart_insights = 0
+    chart_images_analyzed = 0
+    for (conditions,) in (
+        db.query(ExtractedInsight.expected_conditions)
+        .filter(ExtractedInsight.confidence.isnot(None))
+        .all()
+    ):
+        chart = ((conditions or {}).get("chart_analysis") or {}) if isinstance(conditions, dict) else {}
+        image_count = int(chart.get("image_count") or 0)
+        if chart.get("has_chart_context") or image_count > 0:
+            chart_insights += 1
+            chart_images_analyzed += image_count
     by_type = {
         source_type: count
         for source_type, count in (
@@ -130,6 +163,13 @@ def _source_archive_summary(db: Session) -> dict:
         "insights": db.query(ExtractedInsight).count(),
         "full_insights": full_insights,
         "archive_preview_insights": preview_insights,
+        "media_scanned_sources": media_scanned_sources,
+        "media_pending_scan_sources": media_pending_scan_sources,
+        "media_url_total": int(media_url_total or 0),
+        "chart_backed_sources": chart_backed_sources,
+        "chart_backed_pending_extraction": chart_backed_pending_extraction,
+        "chart_insights": chart_insights,
+        "chart_images_analyzed": chart_images_analyzed,
         "by_type": by_type,
         "blog_authors": blog_authors,
     }
@@ -287,6 +327,7 @@ def _parallel_workstreams(
     *,
     market_status: dict,
     provider_candle_counts: dict,
+    source_archive: dict,
     telegram: dict,
     x_sources: dict,
     extraction: dict,
@@ -305,6 +346,8 @@ def _parallel_workstreams(
         for item in paper
     }
     provider_counts_ready = all(count >= 100 for count in provider_candle_counts.values())
+    source_pending = int(source_archive.get("pending_sources") or 0)
+    chart_pending = int(source_archive.get("chart_backed_pending_extraction") or 0)
     external_alert_ready = bool(os.getenv("HEALTHWATCH_WEBHOOK_URL"))
     blog_ready = bool(settings.blog_feeds)
     telegram_ready = (
@@ -347,13 +390,17 @@ def _parallel_workstreams(
         },
         {
             "workstream": "Knowledge extraction",
-            "status": "done" if extraction["openai_enabled"] and extraction["openai_key_present"] else "input_needed",
+            "status": "in_progress" if extraction["openai_enabled"] and extraction["openai_key_present"] and source_pending else ("done" if extraction["openai_enabled"] and extraction["openai_key_present"] else "input_needed"),
             "owner": "system",
             "blocked_by": None if extraction["openai_enabled"] and extraction["openai_key_present"] else "OpenAI API key",
             "inputs_needed": [] if extraction["openai_key_present"] else ["OPENAI_API_KEY"],
             "can_complete_before_paper_gate": True,
-            "next_action": "Archive new sources as they arrive; pending extraction is scheduled.",
-            "detail": f"Deterministic extraction enabled; OpenAI enrichment enabled={extraction['openai_enabled']}.",
+            "next_action": "Continue scheduled chart-first extraction and media enrichment.",
+            "detail": (
+                f"Pending sources={source_pending}; chart-backed pending={chart_pending}; "
+                f"chart insights={source_archive.get('chart_insights', 0)}; "
+                f"OpenAI enrichment enabled={extraction['openai_enabled']}."
+            ),
         },
         {
             "workstream": "Telegram live ingestion",
@@ -441,6 +488,7 @@ def build_readiness_report(db: Session) -> dict:
         "paper_scheduler": _latest_audit(db, "paper.scheduler_run"),
         "market_provider_ingest": _latest_audit(db, "market.provider_ingest_configured"),
         "source_extraction": _latest_audit(db, "extraction.scheduled_process_pending") or _latest_audit(db, "extraction.process_pending"),
+        "source_media_enrichment": _latest_audit(db, "extraction.scheduled_media_enrichment"),
         "blog_ingest": _latest_audit(db, "blog.configured_ingest"),
         "telegram_bot_ingest": _latest_audit(db, "telegram.bot_ingested"),
         "telegram_public_ingest": _latest_audit(db, "telegram.public_ingested"),
@@ -576,6 +624,7 @@ def build_readiness_report(db: Session) -> dict:
     parallel_workstreams = _parallel_workstreams(
         market_status=market_status,
         provider_candle_counts=provider_candle_counts,
+        source_archive=source_archive,
         telegram=telegram,
         x_sources=x_sources,
         extraction=extraction,
