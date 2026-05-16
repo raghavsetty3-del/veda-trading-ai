@@ -84,6 +84,38 @@ if paper_rows:
 else:
     st.info("No forward paper evidence found.")
 
+st.subheader("BANKNIFTY Promotion Gate")
+promotion = readiness.get("banknifty_promotion_readiness") or {}
+if promotion:
+    promotion_cols = st.columns(4)
+    promotion_cols[0].metric(
+        "Paper Candidate",
+        "Ready" if promotion.get("ready_for_paper_candidate_review") else "Blocked",
+    )
+    promotion_cols[1].metric(
+        "Live Candidate",
+        "Ready" if promotion.get("ready_for_live_candidate_review") else "Blocked",
+    )
+    promotion_cols[2].metric("Paper Blocks", len(promotion.get("paper_candidate_blocking_gates") or []))
+    promotion_cols[3].metric("Live Blocks", len(promotion.get("live_candidate_blocking_gates") or []))
+
+    live_blocks = promotion.get("live_candidate_blocking_gates") or []
+    if live_blocks:
+        st.warning("Live candidate review blocked by: " + ", ".join(live_blocks))
+
+    gate_rows = []
+    for item in promotion.get("all_gates") or []:
+        gate_rows.append({
+            "Gate": item.get("gate"),
+            "Required": item.get("required"),
+            "Ready": item.get("ready"),
+            "Detail": item.get("detail"),
+        })
+    if gate_rows:
+        st.dataframe(pd.DataFrame(gate_rows), use_container_width=True, hide_index=True)
+else:
+    st.info("BANKNIFTY promotion readiness is not available yet.")
+
 st.subheader("Data Coverage")
 coverage_rows = []
 for symbol, count in sorted((readiness.get("provider_candle_counts") or {}).items()):
