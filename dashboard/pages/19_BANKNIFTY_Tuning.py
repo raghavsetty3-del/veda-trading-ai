@@ -7,6 +7,14 @@ import streamlit as st
 
 API_BASE = os.getenv("API_BASE", "http://api:8000")
 
+PROMOTION_KEYS = [
+    ("Exit Mode", "exit_mode", "PAPER_EXIT_MODE"),
+    ("Part Book R", "part_book_r_multiple", "PAPER_PART_BOOK_R_MULTIPLE"),
+    ("Part Book Fraction", "part_book_fraction", "PAPER_PART_BOOK_FRACTION"),
+    ("Trail Lookback Candles", "trail_lookback_candles", "PAPER_TRAIL_LOOKBACK_CANDLES"),
+    ("Cooldown Candles", "cooldown_candles", "PAPER_TRADE_COOLDOWN_CANDLES"),
+]
+
 st.title("BANKNIFTY Tuning")
 
 
@@ -47,6 +55,62 @@ def candidate_row(item: dict) -> dict:
     }
 
 
+def candidate_config(item: dict) -> dict:
+    config = dict(item.get("config") or {})
+    config.setdefault("exit_mode", "author_part_book_trail")
+    return config
+
+
+def values_match(left, right) -> bool:
+    if left is None or right is None:
+        return left == right
+    try:
+        return abs(float(left) - float(right)) < 0.000001
+    except (TypeError, ValueError):
+        return str(left) == str(right)
+
+
+def config_matches(left: dict, right: dict) -> bool:
+    return all(values_match(left.get(key), right.get(key)) for _, key, _ in PROMOTION_KEYS)
+
+
+def env_block(config: dict) -> str:
+    lines = []
+    for _, key, env_key in PROMOTION_KEYS:
+        value = config.get(key)
+        if value is not None:
+            lines.append(f"{env_key}={value}")
+    return "\n".join(lines)
+
+
+def comparison_rows(current: dict, candidate: dict) -> list[dict]:
+    rows = []
+    for label, key, env_key in PROMOTION_KEYS:
+        current_value = current.get(key)
+        candidate_value = candidate.get(key)
+        rows.append({
+            "Setting": label,
+            "Env Key": env_key,
+            "Current Paper Value": current_value,
+            "Candidate Value": candidate_value,
+            "Matches": "Yes" if values_match(current_value, candidate_value) else "No",
+        })
+    return rows
+
+
+def banknifty_validation_summary(config: dict) -> tuple[dict | None, bool, str | None]:
+    payload = get("/reports/replay-risk/latest") or {}
+    if not payload.get("available"):
+        return None, False, payload.get("error") or "No replay risk report available."
+
+    validation_report = payload.get("report") or {}
+    validation_config = validation_report.get("config") or {}
+    matches = config_matches(config, validation_config)
+    symbols = validation_report.get("symbols") or []
+    banknifty = next((item for item in symbols if item.get("symbol") == "BANKNIFTY"), None)
+    return banknifty, matches, None
+
+
 reports_payload = get("/reports/banknifty-tuning") or {}
 report_items = reports_payload.get("items") or []
 if not report_items:
@@ -85,6 +149,66 @@ if top_candidates:
     st.dataframe(top_frame, use_container_width=True, hide_index=True)
 else:
     st.info("No top candidates in this report.")
+
+st.subheader("Review Candidate")
+if top_candidates:
+    best_candidate = top_candidates[0]
+    best_config = candidate_config(best_candidate)
+    scheduler_config = get("/paper/scheduler") or {}
+    validation_symbol, validation_matches, validation_error = banknifty_validation_summary(best_config)
+
+    st.caption("Review only. This page does not update paper settings, live settings, .env, or the running scheduler.")
+
+    sell_metrics = best_candidate.get("sell") or {}
+    validation_metrics = (validation_symbol or {}).get("metrics") or {}
+    validation_sell = next(
+        (item for item in (validation_symbol or {}).get("by_side", []) if item.get("side") == "sell"),
+        {},
+    )
+
+    candidate_cols = st.columns(5)
+    candidate_cols[0].metric("Candidate Sell PF", sell_metrics.get("profit_factor_label", "N/A"))
+    candidate_cols[1].metric("Candidate Sell DD", sell_metrics.get("max_drawdown_points", "N/A"))
+    candidate_cols[2].metric("Validation Trades", validation_metrics.get("trades", "N/A"))
+    candidate_cols[3].metric("Validation PF", validation_metrics.get("profit_factor_label", "N/A"))
+    candidate_cols[4].metric("Validation Sell PF", validation_sell.get("profit_factor_label", "N/A"))
+
+    compare_frame = pd.DataFrame(comparison_rows(scheduler_config, best_config))
+    st.dataframe(compare_frame, use_container_width=True, hide_index=True)
+
+    st.text("Candidate env values for later manual promotion")
+    st.code(env_block(best_config), language="dotenv")
+
+    if validation_error:
+        st.info(validation_error)
+    elif not validation_matches:
+        st.warning("Latest replay risk report uses different settings than this candidate.")
+    else:
+        st.success("Latest replay risk report matches this candidate configuration.")
+
+    validation_rows = []
+    if validation_metrics:
+        validation_rows.append({
+            "Scope": "BANKNIFTY Overall",
+            "Trades": validation_metrics.get("trades"),
+            "PF": validation_metrics.get("profit_factor_label"),
+            "Net Points": validation_metrics.get("net_points"),
+            "Max DD": validation_metrics.get("max_drawdown_points"),
+            "Win Rate": validation_metrics.get("win_rate"),
+        })
+    if validation_sell:
+        validation_rows.append({
+            "Scope": "BANKNIFTY Sell",
+            "Trades": validation_sell.get("trades"),
+            "PF": validation_sell.get("profit_factor_label"),
+            "Net Points": validation_sell.get("net_points"),
+            "Max DD": validation_sell.get("max_drawdown_points"),
+            "Win Rate": validation_sell.get("win_rate"),
+        })
+    if validation_rows:
+        st.dataframe(pd.DataFrame(validation_rows), use_container_width=True, hide_index=True)
+else:
+    st.info("No candidate is available to review.")
 
 st.subheader("All Results")
 if results:
