@@ -188,5 +188,9 @@ def ml_snapshot(db: Session, symbol: str, timeframe: str = "5m", limit: int = 25
         .limit(min(MAX_ML_CANDLE_QUERY_LIMIT, max(safe_limit * 5, safe_limit + 100)))
         .all()
     )
-    candles = list(reversed([row for row in rows if should_use_candle(row.symbol, row.timeframe, row.ts)][:safe_limit]))
+    candles = list(reversed([
+        row
+        for row in rows
+        if should_use_candle(row.symbol, row.timeframe, row.ts, row.open, row.high, row.low, row.close, row.volume)
+    ][:safe_limit]))
     return analyze_candles(symbol, timeframe, candles, market_context=market_context)

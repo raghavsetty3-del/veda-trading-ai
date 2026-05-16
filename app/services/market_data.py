@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from app.models import MarketCandle
 from app.services.instrument_profiles import apply_instrument_profile
 from app.services.ml_analysis import analyze_candles
-from app.services.trading_calendar import should_use_candle
+from app.services.trading_calendar import candle_session_label, should_use_candle
 
 MAX_BULK_CANDLE_IMPORT = 20000
 MAX_CANDLE_QUERY_LIMIT = 10000
@@ -90,6 +90,16 @@ def candle_market_context(symbol: str, timeframe: str, candles: list[MarketCandl
     previous = candles[-2] if len(candles) > 1 else None
     recent_high = max(item.high for item in candles[-20:])
     recent_low = min(item.low for item in candles[-20:])
+    session_label = candle_session_label(
+        symbol,
+        timeframe,
+        latest.ts,
+        latest.open,
+        latest.high,
+        latest.low,
+        latest.close,
+        latest.volume,
+    )
     momentum = "flat"
     if previous and latest.close > previous.close:
         momentum = "up"
@@ -106,6 +116,7 @@ def candle_market_context(symbol: str, timeframe: str, candles: list[MarketCandl
         "close_change": latest.close - closes[0],
         "source": latest.source,
         "last_candle_at": latest.ts.isoformat(),
+        "session_context": {"label": session_label, "regular_session": session_label == "regular"},
         **_derive_rule_context(candles),
     })
 
@@ -254,7 +265,11 @@ def latest_candles(db: Session, symbol: str, timeframe: str = "5m", limit: int =
         .limit(fetch_limit)
         .all()
     )
-    filtered = [row for row in rows if should_use_candle(row.symbol, row.timeframe, row.ts)]
+    filtered = [
+        row
+        for row in rows
+        if should_use_candle(row.symbol, row.timeframe, row.ts, row.open, row.high, row.low, row.close, row.volume)
+    ]
     return filtered[:safe_limit]
 
 

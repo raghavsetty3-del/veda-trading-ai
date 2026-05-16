@@ -50,4 +50,6 @@ The strategy evaluator also includes a conservative ML-style analysis layer for 
 curl "http://localhost:8000/ml/snapshot?symbol=NIFTY&timeframe=5m&limit=250"
 ```
 
-For NIFTY/BANKNIFTY intraday candles, provider ingestion and analysis ignore rows outside the regular NSE session window. This prevents weekend or after-hours flat provider snapshots from becoming strategy evidence.
+For NIFTY/BANKNIFTY intraday candles, provider ingestion and analysis accept regular NSE session rows and also accept off-hours candles that show real activity, such as price movement or volume. Flat zero-volume off-hours provider snapshots are ignored. This keeps special trading sessions available for present/future analysis without letting stale weekend snapshots become strategy evidence.
+
+The scheduled paper engine also skips new index entries outside the regular NSE session unless the latest usable candle is classified as an inferred special-session candle, while still allowing reconciliation/evidence checks.

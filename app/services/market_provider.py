@@ -125,18 +125,23 @@ def _parse_csv_candles(text: str, default_symbol: str, default_timeframe: str, s
             symbol = (_value(row, "symbol") or default_symbol).upper()
             timeframe = (_value(row, "timeframe", "interval") or default_timeframe).lower()
             ts = _parse_timestamp(_value(row, "ts", "timestamp", "datetime", "date") or "")
-            if not should_use_candle(symbol, timeframe, ts):
+            open_price = float(_value(row, "open", "o") or 0)
+            high = float(_value(row, "high", "h") or 0)
+            low = float(_value(row, "low", "l") or 0)
+            close = float(_value(row, "close", "c") or 0)
+            volume = float(_value(row, "volume", "vol", "v")) if _value(row, "volume", "vol", "v") else None
+            if not should_use_candle(symbol, timeframe, ts, open_price, high, low, close, volume):
                 filtered += 1
                 continue
             candles.append(MarketCandleCreate(
                 symbol=symbol,
                 timeframe=timeframe,
                 ts=ts,
-                open=float(_value(row, "open", "o") or 0),
-                high=float(_value(row, "high", "h") or 0),
-                low=float(_value(row, "low", "l") or 0),
-                close=float(_value(row, "close", "c") or 0),
-                volume=float(_value(row, "volume", "vol", "v")) if _value(row, "volume", "vol", "v") else None,
+                open=open_price,
+                high=high,
+                low=low,
+                close=close,
+                volume=volume,
                 source=_value(row, "source") or source_name,
             ))
         except Exception as exc:

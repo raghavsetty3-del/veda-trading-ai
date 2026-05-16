@@ -8,6 +8,7 @@ from app.services.audit import audit
 from app.services.market_data import market_snapshot
 from app.services.paper_evidence_state import record_paper_evidence_snapshot
 from app.services.paper_trading import create_paper_trade, reconcile_open_paper_trades
+from app.services.trading_calendar import is_intraday_timeframe, is_nse_index_symbol, is_regular_nse_session_now
 
 
 def configured_paper_symbols() -> list[str]:
@@ -124,6 +125,18 @@ def run_scheduled_paper_trading(
 
         if not snapshot["ready"]:
             item["skipped"] = True
+            items.append(item)
+            continue
+
+        session_label = ((snapshot["market_context"].get("session_context") or {}).get("label") or "unknown")
+        if (
+            is_intraday_timeframe(timeframe)
+            and is_nse_index_symbol(symbol)
+            and not is_regular_nse_session_now()
+            and session_label != "inferred_special_session"
+        ):
+            item["skipped"] = True
+            item["reason"] = "Outside NSE regular session and latest candle is not an inferred special-session candle."
             items.append(item)
             continue
 
