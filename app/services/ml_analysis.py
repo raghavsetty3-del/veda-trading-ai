@@ -6,6 +6,7 @@ from statistics import mean, pstdev
 from sqlalchemy.orm import Session
 
 from app.models import MarketCandle
+from app.services.trading_calendar import should_use_candle
 
 MAX_ML_CANDLE_QUERY_LIMIT = 10000
 
@@ -180,11 +181,12 @@ def analyze_candles(symbol: str, timeframe: str, candles: list[MarketCandle], ma
 
 def ml_snapshot(db: Session, symbol: str, timeframe: str = "5m", limit: int = 250, market_context: dict | None = None) -> dict:
     safe_limit = max(20, min(limit, MAX_ML_CANDLE_QUERY_LIMIT))
-    candles = list(reversed(
+    rows = (
         db.query(MarketCandle)
         .filter_by(symbol=symbol.upper(), timeframe=timeframe.lower())
         .order_by(MarketCandle.ts.desc())
-        .limit(safe_limit)
+        .limit(min(MAX_ML_CANDLE_QUERY_LIMIT, max(safe_limit * 5, safe_limit + 100)))
         .all()
-    ))
+    )
+    candles = list(reversed([row for row in rows if should_use_candle(row.symbol, row.timeframe, row.ts)][:safe_limit]))
     return analyze_candles(symbol, timeframe, candles, market_context=market_context)

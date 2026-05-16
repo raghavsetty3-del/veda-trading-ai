@@ -49,3 +49,5 @@ The strategy evaluator also includes a conservative ML-style analysis layer for 
 ```bash
 curl "http://localhost:8000/ml/snapshot?symbol=NIFTY&timeframe=5m&limit=250"
 ```
+
+For NIFTY/BANKNIFTY intraday candles, provider ingestion and analysis ignore rows outside the regular NSE session window. This prevents weekend or after-hours flat provider snapshots from becoming strategy evidence.

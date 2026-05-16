@@ -12,6 +12,7 @@ from app.schemas import MarketCandleCreate
 from app.services.angelone_market_data import angelone_status, fetch_angelone_candles_as_csv
 from app.services.dhan_market_data import dhan_status, fetch_dhan_candles_as_csv
 from app.services.market_data import upsert_candles
+from app.services.trading_calendar import should_use_candle
 
 
 def configured_market_sources() -> list[dict]:
@@ -117,13 +118,20 @@ def _parse_csv_candles(text: str, default_symbol: str, default_timeframe: str, s
     reader = csv.DictReader(StringIO(text.lstrip("\ufeff")))
     candles = []
     errors = []
+    filtered = 0
     for index, raw_row in enumerate(reader, start=2):
         row = {str(key).strip().lower(): value for key, value in raw_row.items() if key}
         try:
+            symbol = (_value(row, "symbol") or default_symbol).upper()
+            timeframe = (_value(row, "timeframe", "interval") or default_timeframe).lower()
+            ts = _parse_timestamp(_value(row, "ts", "timestamp", "datetime", "date") or "")
+            if not should_use_candle(symbol, timeframe, ts):
+                filtered += 1
+                continue
             candles.append(MarketCandleCreate(
-                symbol=(_value(row, "symbol") or default_symbol).upper(),
-                timeframe=(_value(row, "timeframe", "interval") or default_timeframe).lower(),
-                ts=_parse_timestamp(_value(row, "ts", "timestamp", "datetime", "date") or ""),
+                symbol=symbol,
+                timeframe=timeframe,
+                ts=ts,
                 open=float(_value(row, "open", "o") or 0),
                 high=float(_value(row, "high", "h") or 0),
                 low=float(_value(row, "low", "l") or 0),
@@ -138,7 +146,7 @@ def _parse_csv_candles(text: str, default_symbol: str, default_timeframe: str, s
     truncated = len(candles) > max_rows
     if truncated:
         candles = candles[-max_rows:]
-    return {"candles": candles, "errors": errors, "truncated": truncated}
+    return {"candles": candles, "errors": errors, "truncated": truncated, "filtered": filtered}
 
 
 def ingest_market_source(db: Session, source: dict) -> dict:
@@ -188,6 +196,7 @@ def ingest_market_source(db: Session, source: dict) -> dict:
         },
         "parse_errors": parsed["errors"],
         "truncated": parsed["truncated"],
+        "filtered": parsed["filtered"],
     }
 
 

@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from app.models import MarketCandle
 from app.services.instrument_profiles import apply_instrument_profile
 from app.services.ml_analysis import analyze_candles
+from app.services.trading_calendar import should_use_candle
 
 MAX_BULK_CANDLE_IMPORT = 20000
 MAX_CANDLE_QUERY_LIMIT = 10000
@@ -245,13 +246,16 @@ def upsert_candles(db: Session, candles: list) -> dict:
 
 def latest_candles(db: Session, symbol: str, timeframe: str = "5m", limit: int = 50) -> list[MarketCandle]:
     safe_limit = max(1, min(limit, MAX_CANDLE_QUERY_LIMIT))
-    return (
+    fetch_limit = min(MAX_CANDLE_QUERY_LIMIT, max(safe_limit * 5, safe_limit + 100))
+    rows = (
         db.query(MarketCandle)
         .filter_by(symbol=symbol.upper(), timeframe=timeframe.lower())
         .order_by(MarketCandle.ts.desc())
-        .limit(safe_limit)
+        .limit(fetch_limit)
         .all()
     )
+    filtered = [row for row in rows if should_use_candle(row.symbol, row.timeframe, row.ts)]
+    return filtered[:safe_limit]
 
 
 def market_snapshot(db: Session, symbol: str, timeframe: str = "5m", limit: int = 50) -> dict:
