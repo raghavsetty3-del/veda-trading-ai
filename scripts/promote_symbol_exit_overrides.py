@@ -21,6 +21,18 @@ def fetch_json(api_url: str, path: str, params: dict | None = None) -> dict:
         return json.loads(response.read().decode("utf-8"))
 
 
+def post_json(api_url: str, path: str, payload: dict) -> dict:
+    body = json.dumps(payload).encode("utf-8")
+    request = urllib.request.Request(
+        api_url.rstrip("/") + path,
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
 def parse_env(lines: list[str]) -> dict[str, str]:
     values = {}
     for line in lines:
@@ -146,6 +158,26 @@ def main() -> int:
     )
     env_path.chmod(stat.S_IRUSR | stat.S_IWUSR)
     print(f"Updated {env_path}. Backup: {backup_path}")
+    try:
+        post_json(
+            args.api_url,
+            "/audit",
+            {
+                "event_type": "paper.symbol_exit_overrides_promoted",
+                "severity": "WARN",
+                "message": "Applied reviewed per-symbol paper exit overrides",
+                "payload": {
+                    "symbols": sorted(overrides),
+                    "overrides": overrides,
+                    "env_file": str(env_path),
+                    "backup_file": str(backup_path),
+                    "live_trading_remained_disabled": True,
+                },
+            },
+        )
+        print("Recorded audit event paper.symbol_exit_overrides_promoted.")
+    except Exception as exc:
+        print(f"Warning: override was applied, but audit event could not be recorded: {exc}", file=sys.stderr)
     return 0
 
 

@@ -8,7 +8,7 @@ from app.models import AuditLog, ExtractedInsight, MarketCandle, PaperTrade, Sou
 from app.services.market_provider import market_provider_status
 from app.ingestion.telegram_listener import telegram_status
 from app.services.knowledge_extraction import extraction_status
-from app.services.promotion_readiness import build_banknifty_promotion_readiness
+from app.services.promotion_readiness import build_banknifty_promotion_readiness, build_symbol_promotion_readiness
 from app.services.recovery import get_kill_switch
 from app.services.x_ingestion import x_status
 
@@ -512,9 +512,15 @@ def build_readiness_report(db: Session) -> dict:
         "telegram_bot_ingest": _latest_audit(db, "telegram.bot_ingested"),
         "telegram_public_ingest": _latest_audit(db, "telegram.public_ingested"),
         "x_ingest": _latest_audit(db, "x.configured_ingest"),
+        "paper_symbol_exit_overrides": _latest_audit(db, "paper.symbol_exit_overrides_promoted"),
     }
     kill_switch = get_kill_switch(db)
-    banknifty_promotion_readiness = build_banknifty_promotion_readiness(db)
+    promotion_readiness_by_symbol = {
+        symbol: build_symbol_promotion_readiness(db, symbol=symbol)
+        for symbol in symbols
+    }
+    banknifty_promotion_readiness = promotion_readiness_by_symbol["BANKNIFTY"]
+    nifty_promotion_readiness = promotion_readiness_by_symbol["NIFTY"]
 
     gates = [
         {
@@ -606,16 +612,19 @@ def build_readiness_report(db: Session) -> dict:
             "ready": extraction["openai_enabled"] and extraction["openai_key_present"],
             "detail": "Optional enrichment only; deterministic extraction is active.",
         },
-        {
-            "gate": "banknifty_paper_candidate_review_ready",
-            "required": False,
-            "ready": banknifty_promotion_readiness["ready_for_paper_candidate_review"],
-            "detail": (
-                "BANKNIFTY tuned candidate replay gates are clear."
-                if banknifty_promotion_readiness["ready_for_paper_candidate_review"]
-                else "Blocking: " + ", ".join(banknifty_promotion_readiness["paper_candidate_blocking_gates"])
-            ),
-        },
+        *[
+            {
+                "gate": f"{symbol.lower()}_paper_candidate_review_ready",
+                "required": False,
+                "ready": promotion["ready_for_paper_candidate_review"],
+                "detail": (
+                    f"{symbol} tuned candidate replay gates are clear."
+                    if promotion["ready_for_paper_candidate_review"]
+                    else "Blocking: " + ", ".join(promotion["paper_candidate_blocking_gates"])
+                ),
+            }
+            for symbol, promotion in promotion_readiness_by_symbol.items()
+        ],
     ]
 
     missing_required_inputs = []
@@ -681,6 +690,8 @@ def build_readiness_report(db: Session) -> dict:
         "validation": validation,
         "historical_paper_replay": historical_paper_replay,
         "banknifty_promotion_readiness": banknifty_promotion_readiness,
+        "nifty_promotion_readiness": nifty_promotion_readiness,
+        "promotion_readiness_by_symbol": promotion_readiness_by_symbol,
         "paper": paper,
         "candle_counts": candle_counts,
         "provider_candle_counts": provider_candle_counts,

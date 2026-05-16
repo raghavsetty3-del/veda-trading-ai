@@ -21,7 +21,7 @@ from app.services.paper_replay import evaluate_historical_paper_replay
 from app.services.paper_trading import create_paper_trade, list_paper_trades, paper_performance_metrics, reconcile_open_paper_trades, update_paper_trade_status
 from app.services.paper_replay_validation import create_paper_replay_validation
 from app.services.paper_validation import create_paper_trade_validation
-from app.services.promotion_readiness import build_banknifty_promotion_readiness
+from app.services.promotion_readiness import build_banknifty_promotion_readiness, build_symbol_promotion_readiness
 from app.services.replay_reports import banknifty_tuning_report, latest_replay_risk_report, list_banknifty_tuning_reports, list_nifty_tuning_reports, list_replay_risk_reports, list_sell_tuning_reports, nifty_tuning_report, sell_tuning_report
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.readiness import build_readiness_report
@@ -130,6 +130,25 @@ def banknifty_promotion_readiness(
     db: Session = Depends(get_db),
 ):
     return build_banknifty_promotion_readiness(db, tuning_name=tuning_name, replay_name=replay_name)
+
+
+@app.get("/reports/nifty-promotion-readiness")
+def nifty_promotion_readiness(
+    tuning_name: str | None = None,
+    replay_name: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return build_symbol_promotion_readiness(db, symbol="NIFTY", tuning_name=tuning_name, replay_name=replay_name)
+
+
+@app.get("/reports/promotion-readiness")
+def symbol_promotion_readiness(
+    symbol: str = "BANKNIFTY",
+    tuning_name: str | None = None,
+    replay_name: str | None = None,
+    db: Session = Depends(get_db),
+):
+    return build_symbol_promotion_readiness(db, symbol=symbol, tuning_name=tuning_name, replay_name=replay_name)
 
 
 @app.get("/principles")

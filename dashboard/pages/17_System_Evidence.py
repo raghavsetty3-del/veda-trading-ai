@@ -26,6 +26,7 @@ def get(path, params=None):
 
 readiness = get("/readiness") or {}
 performance = get("/paper/performance", {"symbols": "NIFTY,BANKNIFTY", "limit": 500}) or {}
+scheduler = get("/paper/scheduler") or {}
 health = get("/health") or {}
 
 health_cols = st.columns(5)
@@ -84,37 +85,65 @@ if paper_rows:
 else:
     st.info("No forward paper evidence found.")
 
-st.subheader("BANKNIFTY Promotion Gate")
-promotion = readiness.get("banknifty_promotion_readiness") or {}
-if promotion:
-    promotion_cols = st.columns(4)
-    promotion_cols[0].metric(
-        "Paper Candidate",
-        "Ready" if promotion.get("ready_for_paper_candidate_review") else "Blocked",
-    )
-    promotion_cols[1].metric(
-        "Live Candidate",
-        "Ready" if promotion.get("ready_for_live_candidate_review") else "Blocked",
-    )
-    promotion_cols[2].metric("Paper Blocks", len(promotion.get("paper_candidate_blocking_gates") or []))
-    promotion_cols[3].metric("Live Blocks", len(promotion.get("live_candidate_blocking_gates") or []))
+st.subheader("Effective Paper Exit Settings")
+effective_rows = []
+for symbol, config in sorted((scheduler.get("effective_exit_by_symbol") or {}).items()):
+    effective_rows.append({
+        "Symbol": symbol,
+        "Source": config.get("source"),
+        "Exit Mode": config.get("exit_mode"),
+        "Part Book R": config.get("part_book_r_multiple"),
+        "Part Book Fraction": config.get("part_book_fraction"),
+        "Trail Lookback Candles": config.get("trail_lookback_candles"),
+        "Cooldown Candles": config.get("cooldown_candles"),
+    })
 
-    live_blocks = promotion.get("live_candidate_blocking_gates") or []
-    if live_blocks:
-        st.warning("Live candidate review blocked by: " + ", ".join(live_blocks))
+if effective_rows:
+    st.dataframe(pd.DataFrame(effective_rows), use_container_width=True, hide_index=True)
+else:
+    st.info("Effective paper exit settings are not available yet.")
 
+st.subheader("Promotion Gates")
+promotions = readiness.get("promotion_readiness_by_symbol") or {}
+if not promotions and readiness.get("banknifty_promotion_readiness"):
+    promotions = {"BANKNIFTY": readiness.get("banknifty_promotion_readiness") or {}}
+
+if promotions:
+    summary_rows = []
     gate_rows = []
-    for item in promotion.get("all_gates") or []:
-        gate_rows.append({
-            "Gate": item.get("gate"),
-            "Required": item.get("required"),
-            "Ready": item.get("ready"),
-            "Detail": item.get("detail"),
+    for symbol, promotion in sorted(promotions.items()):
+        summary_rows.append({
+            "Symbol": symbol,
+            "Paper Candidate": "Ready" if promotion.get("ready_for_paper_candidate_review") else "Blocked",
+            "Live Candidate": "Ready" if promotion.get("ready_for_live_candidate_review") else "Blocked",
+            "Paper Blocks": len(promotion.get("paper_candidate_blocking_gates") or []),
+            "Live Blocks": len(promotion.get("live_candidate_blocking_gates") or []),
+            "Effective Source": (promotion.get("effective_paper_scheduler") or {}).get("source"),
         })
+        for item in promotion.get("all_gates") or []:
+            gate_rows.append({
+                "Symbol": symbol,
+                "Gate": item.get("gate"),
+                "Required": item.get("required"),
+                "Ready": item.get("ready"),
+                "Detail": item.get("detail"),
+            })
+
+    st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
+    live_blocks = {
+        symbol: promotion.get("live_candidate_blocking_gates") or []
+        for symbol, promotion in promotions.items()
+        if promotion.get("live_candidate_blocking_gates")
+    }
+    if live_blocks:
+        st.warning(
+            "Live candidate review blocked by: "
+            + "; ".join(f"{symbol}: {', '.join(blocks)}" for symbol, blocks in sorted(live_blocks.items()))
+        )
     if gate_rows:
         st.dataframe(pd.DataFrame(gate_rows), use_container_width=True, hide_index=True)
 else:
-    st.info("BANKNIFTY promotion readiness is not available yet.")
+    st.info("Promotion readiness is not available yet.")
 
 st.subheader("Data Coverage")
 coverage_rows = []

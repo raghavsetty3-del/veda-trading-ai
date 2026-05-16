@@ -17,16 +17,18 @@ Last updated: 2026-05-16
 - Replay risk reporting is generated with drawdown, monthly, side-wise, regime, and structure breakdowns.
 - A dashboard page now surfaces replay risk reports without opening JSON or CSV files.
 - A dashboard page now surfaces BANKNIFTY tuning reports and top candidates without opening JSON files.
-- BANKNIFTY sell-side replay-only tuning has started with a parameter sweep script; it does not change live or paper settings.
+- A dashboard page now surfaces NIFTY tuning reports and top candidates without opening JSON files.
+- BANKNIFTY and NIFTY replay-only tuning have produced reviewed per-symbol paper exit candidates.
+- Scheduled paper trading uses per-symbol paper exit overrides for NIFTY and BANKNIFTY.
+- Promotion readiness is exposed per symbol; live promotion remains blocked until forward paper evidence is ready.
+- Promotion drawdown gates use symbol-scaled tuning evidence so NIFTY is not judged by BANKNIFTY-sized point thresholds.
 
 ## Current Evidence
 
-- NIFTY historical replay: 500 realized trades, profit factor 2.39, net 5056.55 points, max drawdown 198.96 points.
-- BANKNIFTY historical replay: 500 realized trades, profit factor 1.881, net 22044.97 points, max drawdown 2024.03 points.
-- BANKNIFTY sell side is the weakest replay pocket: profit factor 1.626, max drawdown 2024.03 points.
-- BANKNIFTY sell-side quick tuning screen: best starter candidate uses part-book fraction 0.6 and trail lookback 2, improving 100-trade screened sell drawdown by 404.81 points and sell profit factor from 1.331 to 1.602.
-- BANKNIFTY best-candidate 500-trade replay: profit factor 2.348, net 26602.07 points, max drawdown 1619.22 points; sell-side profit factor 1.972 across 219 sell trades.
-- BANKNIFTY full-grid top 500-trade replay: part-book R 1.25, part-book fraction 0.6, trail lookback 3; profit factor 2.45, net 31200.27 points, max drawdown 1619.22 points; sell-side profit factor 1.985 across 234 sell trades.
+- NIFTY current tuned 500-trade replay: part-book R 0.75, part-book fraction 0.6, trail lookback 4, cooldown 5; profit factor 3.12, sell profit factor 3.55 across 171 sell trades.
+- BANKNIFTY current tuned 500-trade replay: part-book R 1.25, part-book fraction 0.6, trail lookback 3, cooldown 5; profit factor 2.45, net 31200.27 points, max drawdown 1619.22 points; sell-side profit factor 1.985 across 234 sell trades.
+- The earlier BANKNIFTY baseline weak pocket was sell-side profit factor 1.626 with max drawdown 2024.03 points; tuned validation improved sell profit factor and reduced drawdown.
+- Effective paper scheduler configs: NIFTY uses R 0.75, fraction 0.6, trail 4, cooldown 5; BANKNIFTY uses R 1.25, fraction 0.6, trail 3, cooldown 5.
 - Forward paper evidence is not ready yet: NIFTY has 1 closed paper trade; BANKNIFTY has 0 closed paper trades.
 
 ## Pending
@@ -34,7 +36,7 @@ Last updated: 2026-05-16
 - Wait for regular market sessions to collect at least 20 closed forward paper trades per symbol.
 - Confirm forward paper P&L remains positive for NIFTY and BANKNIFTY.
 - Finish processing the remaining blog/chart extraction backlog.
-- Review full-grid BANKNIFTY tuning evidence before promoting any parameter change to scheduled paper trading.
+- Keep collecting forward paper evidence under the per-symbol exit settings before any live review.
 - Keep validating chart-image extraction quality against the author's chart annotations.
 - Push any local commits that require laptop SSH passphrase entry.
 
@@ -46,7 +48,7 @@ Last updated: 2026-05-16
 
 ## Next Actions That Do Not Depend On Market Sessions
 
-- Review the new Replay Risk Report dashboard page after deployment.
-- Add paper-setting promotion controls after the full-grid BANKNIFTY candidate is manually reviewed.
-- Add a dashboard view for tuning candidates if the first sweep produces useful alternatives.
+- Review per-symbol promotion readiness in the System Evidence dashboard after deployment.
+- Add audit visibility for paper-setting override changes.
+- Add lightweight unit coverage for symbol exit override parsing and symbol promotion readiness helpers.
 - Continue chart extraction and author-mechanism enrichment in the background.
