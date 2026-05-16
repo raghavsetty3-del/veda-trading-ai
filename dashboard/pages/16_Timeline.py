@@ -55,6 +55,13 @@ timeline = [
         "Status": "Dhan provider-backed candles loaded",
     },
     {
+        "Phase": "Historical paper replay evidence",
+        "Target": "2026-05-16",
+        "Estimate": "Done",
+        "Owner": "Codex",
+        "Status": "Timestamp-correct replay validations saved",
+    },
+    {
         "Phase": "Paper-trade evidence run",
         "Target": "2026-05-15 to 2026-05-24",
         "Estimate": "5 trading sessions minimum",
@@ -85,9 +92,9 @@ timeline = [
     {
         "Phase": "OpenAI extraction enrichment",
         "Target": "2026-05-16",
-        "Estimate": "30-60 min after API key",
+        "Estimate": "Done",
         "Owner": "Shared",
-        "Status": "Optional, disabled until configured",
+        "Status": "Configured and active for optional enrichment",
     },
     {
         "Phase": "Live-readiness review",
@@ -137,6 +144,31 @@ if provider_candle_counts or total_candle_counts:
                 "Total": total_candle_counts.get(symbol, 0),
             }
             for symbol in symbols
+        ]),
+        use_container_width=True,
+        hide_index=True,
+    )
+
+historical_replay = readiness.get("historical_paper_replay") or {}
+replay_symbols = sorted(set(historical_replay.get("required_symbols") or []))
+if replay_symbols:
+    st.subheader("Historical Paper Replay Evidence")
+    latest_by_symbol = historical_replay.get("latest_by_symbol") or {}
+    passing_by_symbol = historical_replay.get("passing_by_symbol") or {}
+    st.dataframe(
+        pd.DataFrame([
+            {
+                "Symbol": symbol,
+                "Latest Case": (latest_by_symbol.get(symbol) or {}).get("case_code"),
+                "Latest Status": (latest_by_symbol.get(symbol) or {}).get("status"),
+                "Passing Case": (passing_by_symbol.get(symbol) or {}).get("case_code"),
+                "Realized": (passing_by_symbol.get(symbol) or {}).get("realized_trades"),
+                "Net P&L": (passing_by_symbol.get(symbol) or {}).get("net_realized_pnl"),
+                "Profit Factor": (passing_by_symbol.get(symbol) or {}).get("profit_factor_label")
+                or (passing_by_symbol.get(symbol) or {}).get("profit_factor"),
+                "Avg R": (passing_by_symbol.get(symbol) or {}).get("average_r_multiple"),
+            }
+            for symbol in replay_symbols
         ]),
         use_container_width=True,
         hide_index=True,

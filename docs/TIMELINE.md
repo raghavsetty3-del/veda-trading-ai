@@ -17,6 +17,7 @@ Completed as of 2026-05-15:
 - DhanHQ is configured for NIFTY and BANKNIFTY 5-minute provider-backed candles.
 - More than 4,400 provider-backed candles per instrument are loaded.
 - Dhan-backed stored-candle replay validation passes for the tuned RULE-RETRACEMENT-LRHR band on NIFTY and BANKNIFTY using rolling 200-candle windows.
+- Timestamp-correct historical paper replay validation passes for NIFTY and BANKNIFTY using the author's part-book/trailing exit plan.
 - Author-aligned tuning now requires price action structure, true EMA200 bias, LRHR retracement, and higher-timeframe direction before long/short bias.
 - Pre-EMA200 open paper trades were cancelled as superseded so new evidence starts from the corrected strategy logic.
 - Historical paper replay showed better 90-day metrics with a 5-candle cooldown, now applied to scheduled paper evaluation.
@@ -32,11 +33,12 @@ Completed as of 2026-05-15:
 | GitHub sync | 2026-05-15 | Done | User + Codex | Current commits pushed |
 | Real market data provider | 2026-05-15 | Done | Shared | DhanHQ active for NIFTY and BANKNIFTY |
 | Historical NIFTY/BANKNIFTY candles | 2026-05-15 | Done | Shared | Dhan provider-backed candles loaded |
+| Historical paper replay evidence | 2026-05-16 | Done | Codex | Timestamp-correct replay validations saved |
 | Paper-trade evidence run | 2026-05-15 to 2026-05-24 | 5 trading sessions minimum | System | Provider candles active; collecting signals and exits |
 | Rule tuning from evidence | 2026-05-25 to 2026-05-29 | 3-5 days | Codex + User review | Depends on paper evidence |
 | External alerts | 2026-05-15 | 30-60 minutes after webhook URL | Shared | Hook is built, URL needed |
 | Telegram/blog production ingestion | 2026-05-16 to 2026-05-17 | 0.5-1 day after credentials | Shared | Waiting for Telegram/RSS details |
-| OpenAI extraction enrichment | 2026-05-16 | 30-60 minutes after API key | Shared | Optional, disabled until configured |
+| OpenAI extraction enrichment | 2026-05-16 | Done | Shared | Configured and active for optional enrichment |
 | Live-readiness review | 2026-06-01 or later | 1 review session after evidence gates pass | User | Not ready yet |
 
 ## Readiness Gates Before Live Trading
@@ -49,6 +51,7 @@ Do not enable live execution until all gates are reviewed:
 - Average R-multiple is positive.
 - No single failed strategy export is being promoted as production evidence.
 - Provider-backed replay and paper evidence agree with the intended rule behavior.
+- Timestamp-correct historical paper replay validation passes for each reviewed instrument.
 - Daily offsite backups and weekly restore drill are healthy.
 - Kill switch remains tested and available.
 - User explicitly approves the move from paper to live.

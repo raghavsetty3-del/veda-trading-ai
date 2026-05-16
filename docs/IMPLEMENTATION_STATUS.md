@@ -53,6 +53,7 @@ Date: 2026-05-16
 - Historical paper replay and stored-candle replay now use timestamp-correct 15-minute and 1-hour higher-timeframe context, avoiding lookahead while matching live paper evaluation.
 - Backtest Replay dashboard exposes historical paper replay with author-style part-book/trail metrics.
 - Historical paper replay can now create validation evidence cases. Timestamped-MTF replay evidence passed for both NIFTY and BANKNIFTY using the author part-book/trail exit plan.
+- Live-readiness now includes a required historical paper replay gate, separate from forward paper evidence collection.
 - Paper-trading observations and closed-trade P&L can now create validation evidence cases.
 - Strategy trade-export CSVs can now create performance validation evidence cases.
 - Failed trade-export evidence can be reviewed as not promoted while preserving the failed result.

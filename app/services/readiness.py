@@ -113,12 +113,16 @@ def _latest_successful_audit(db: Session, event_type: str) -> dict | None:
 def _validation_summary(db: Session) -> dict:
     rows = db.query(ValidationCase).order_by(ValidationCase.created_at.desc()).limit(500).all()
     by_status: dict[str, int] = {}
+    by_type_status: dict[str, dict[str, int]] = {}
     trade_export_failures = 0
     reviewed_trade_export_failures = 0
     unreviewed_trade_export_failures = 0
     for row in rows:
         by_status[row.status] = by_status.get(row.status, 0) + 1
         expected_type = (row.expected_json or {}).get("type")
+        if expected_type:
+            type_counts = by_type_status.setdefault(expected_type, {})
+            type_counts[row.status] = type_counts.get(row.status, 0) + 1
         if expected_type == "trade_export_performance" and row.status != "pass":
             trade_export_failures += 1
             if _reviewed_failed_trade_export(row):
@@ -128,6 +132,7 @@ def _validation_summary(db: Session) -> dict:
     return {
         "total": len(rows),
         "by_status": by_status,
+        "by_type_status": by_type_status,
         "trade_export_failures": trade_export_failures,
         "reviewed_trade_export_failures": reviewed_trade_export_failures,
         "unreviewed_trade_export_failures": unreviewed_trade_export_failures,
@@ -144,6 +149,81 @@ def _reviewed_failed_trade_export(row: ValidationCase) -> bool:
     return "[reviewed_trade_export_failure]" in (row.notes or "").lower()
 
 
+def _serialize_replay_validation(row: ValidationCase) -> dict:
+    expected = row.expected_json or {}
+    delivered = row.delivered_json or {}
+    metrics = delivered.get("metrics") if isinstance(delivered, dict) else {}
+    metrics = metrics if isinstance(metrics, dict) else {}
+    checks = delivered.get("checks") if isinstance(delivered, dict) else {}
+    checks = checks if isinstance(checks, dict) else {}
+    return {
+        "case_code": row.case_code,
+        "title": row.title,
+        "symbol": str(expected.get("symbol") or delivered.get("symbol") or "").upper(),
+        "timeframe": expected.get("timeframe") or delivered.get("timeframe"),
+        "status": row.status,
+        "score": row.score,
+        "created_at": row.created_at.isoformat() if row.created_at else None,
+        "evaluated_at": row.evaluated_at.isoformat() if row.evaluated_at else None,
+        "source_candles": delivered.get("source_candles"),
+        "exit_mode": delivered.get("exit_mode"),
+        "cooldown_candles": delivered.get("cooldown_candles"),
+        "realized_trades": metrics.get("realized_trades"),
+        "net_realized_pnl": metrics.get("net_realized_pnl"),
+        "profit_factor": metrics.get("profit_factor"),
+        "profit_factor_label": metrics.get("profit_factor_label"),
+        "average_r_multiple": metrics.get("average_r_multiple"),
+        "checks": checks,
+    }
+
+
+def _historical_paper_replay_summary(db: Session, symbols: list[str]) -> dict:
+    target_symbols = [symbol.upper() for symbol in symbols]
+    rows = db.query(ValidationCase).order_by(ValidationCase.created_at.desc()).limit(500).all()
+    latest_by_symbol: dict[str, dict] = {}
+    passing_by_symbol: dict[str, dict] = {}
+    total_seen = 0
+
+    for row in rows:
+        expected = row.expected_json or {}
+        if expected.get("type") != "historical_paper_replay":
+            continue
+        delivered = row.delivered_json or {}
+        symbol = str(expected.get("symbol") or delivered.get("symbol") or "").upper()
+        if symbol not in target_symbols:
+            continue
+        total_seen += 1
+        item = _serialize_replay_validation(row)
+        if symbol not in latest_by_symbol:
+            latest_by_symbol[symbol] = item
+        if row.status == "pass" and symbol not in passing_by_symbol:
+            passing_by_symbol[symbol] = item
+
+    missing_symbols = [symbol for symbol in target_symbols if symbol not in passing_by_symbol]
+    return {
+        "type": "historical_paper_replay",
+        "required_symbols": target_symbols,
+        "total_seen": total_seen,
+        "latest_by_symbol": latest_by_symbol,
+        "passing_by_symbol": passing_by_symbol,
+        "missing_symbols": missing_symbols,
+        "all_symbols_passed": not missing_symbols,
+    }
+
+
+def _historical_replay_gate_detail(evidence: dict) -> str:
+    passing = {
+        symbol: item.get("case_code")
+        for symbol, item in sorted((evidence.get("passing_by_symbol") or {}).items())
+    }
+    missing = evidence.get("missing_symbols") or []
+    if not passing:
+        return f"No passing historical paper replay validations yet. Missing: {missing}"
+    if missing:
+        return f"Passing historical paper replay validations: {passing}; missing: {missing}"
+    return f"Passing historical paper replay validations: {passing}"
+
+
 def build_readiness_report(db: Session) -> dict:
     market_status = market_provider_status()
     telegram = telegram_status()
@@ -151,6 +231,7 @@ def build_readiness_report(db: Session) -> dict:
     validation = _validation_summary(db)
     symbols = ["NIFTY", "BANKNIFTY"]
     paper = [_paper_metrics(db, symbol) for symbol in symbols]
+    historical_paper_replay = _historical_paper_replay_summary(db, symbols)
     candle_counts = {symbol: _candle_count(db, symbol) for symbol in symbols}
     provider_candle_counts = {symbol: _provider_candle_count(db, symbol) for symbol in symbols}
     non_production_source_counts = _non_production_source_counts(db)
@@ -176,6 +257,12 @@ def build_readiness_report(db: Session) -> dict:
             "required": True,
             "ready": all(provider_candle_counts[symbol] >= 100 for symbol in symbols),
             "detail": f"Provider-backed candle counts: {provider_candle_counts}; total counts: {candle_counts}",
+        },
+        {
+            "gate": "historical_paper_replay_passed",
+            "required": True,
+            "ready": historical_paper_replay["all_symbols_passed"],
+            "detail": _historical_replay_gate_detail(historical_paper_replay),
         },
         {
             "gate": "closed_paper_trades_ready",
@@ -270,6 +357,7 @@ def build_readiness_report(db: Session) -> dict:
         "telegram": telegram,
         "extraction": extraction,
         "validation": validation,
+        "historical_paper_replay": historical_paper_replay,
         "paper": paper,
         "candle_counts": candle_counts,
         "provider_candle_counts": provider_candle_counts,
