@@ -70,7 +70,14 @@ def list_replay_risk_reports() -> dict[str, Any]:
     }
 
 
-def latest_replay_risk_report(name: str | None = None) -> dict[str, Any]:
+def _report_has_symbol(report: dict[str, Any], symbol: str | None) -> bool:
+    if not symbol:
+        return True
+    target = symbol.upper()
+    return any(item.get("symbol") == target for item in report.get("symbols") or [])
+
+
+def latest_replay_risk_report(name: str | None = None, symbol: str | None = None) -> dict[str, Any]:
     files = _report_files("replay_risk_report_*.json")
     if not files:
         return {
@@ -83,19 +90,36 @@ def latest_replay_risk_report(name: str | None = None) -> dict[str, Any]:
         safe_name = Path(name).name
         for path in files:
             if path.name == safe_name:
-                return _load_report(path)
+                payload = _load_report(path)
+                if _report_has_symbol(payload.get("report") or {}, symbol):
+                    return payload
+                break
         return {
             "available": False,
             "searched_paths": [str(path) for path in REPORT_DIRS],
             "report": None,
-            "error": f"Replay risk report not found: {safe_name}",
+            "error": f"Replay risk report not found: {safe_name}" if not symbol else f"Replay risk report not found for {symbol.upper()}: {safe_name}",
         }
 
-    return _load_report(files[0])
+    for path in files:
+        try:
+            payload = _load_report(path)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if _report_has_symbol(payload.get("report") or {}, symbol):
+            return payload
+
+    return {
+        "available": False,
+        "searched_paths": [str(path) for path in REPORT_DIRS],
+        "report": None,
+        "error": f"No replay risk report found for {symbol.upper()}" if symbol else "No replay risk report found.",
+    }
 
 
-def list_banknifty_tuning_reports() -> dict[str, Any]:
-    files = _report_files("banknifty_sell_tuning_*.json")
+def list_sell_tuning_reports(symbol: str = "BANKNIFTY") -> dict[str, Any]:
+    target = symbol.strip().lower()
+    files = _report_files(f"{target}_sell_tuning_*.json")
     if not files:
         return {
             "available": False,
@@ -115,6 +139,7 @@ def list_banknifty_tuning_reports() -> dict[str, Any]:
             "name": path.name,
             "path": str(path),
             "updated_at": datetime.utcfromtimestamp(path.stat().st_mtime).isoformat(),
+            "symbol": report.get("symbol") or target.upper(),
             "generated_at": report.get("generated_at"),
             "mode": report.get("mode"),
             "purpose": report.get("purpose"),
@@ -131,8 +156,9 @@ def list_banknifty_tuning_reports() -> dict[str, Any]:
     }
 
 
-def banknifty_tuning_report(name: str | None = None) -> dict[str, Any]:
-    files = _report_files("banknifty_sell_tuning_*.json")
+def sell_tuning_report(symbol: str = "BANKNIFTY", name: str | None = None) -> dict[str, Any]:
+    target = symbol.strip().lower()
+    files = _report_files(f"{target}_sell_tuning_*.json")
     if not files:
         return {
             "available": False,
@@ -149,7 +175,23 @@ def banknifty_tuning_report(name: str | None = None) -> dict[str, Any]:
             "available": False,
             "searched_paths": [str(path) for path in REPORT_DIRS],
             "report": None,
-            "error": f"BANKNIFTY tuning report not found: {safe_name}",
+            "error": f"{target.upper()} tuning report not found: {safe_name}",
         }
 
     return _load_report(files[0])
+
+
+def list_banknifty_tuning_reports() -> dict[str, Any]:
+    return list_sell_tuning_reports("BANKNIFTY")
+
+
+def banknifty_tuning_report(name: str | None = None) -> dict[str, Any]:
+    return sell_tuning_report("BANKNIFTY", name=name)
+
+
+def list_nifty_tuning_reports() -> dict[str, Any]:
+    return list_sell_tuning_reports("NIFTY")
+
+
+def nifty_tuning_report(name: str | None = None) -> dict[str, Any]:
+    return sell_tuning_report("NIFTY", name=name)

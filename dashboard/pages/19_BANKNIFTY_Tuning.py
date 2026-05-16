@@ -112,7 +112,7 @@ def gate_rows(gates: list[dict], area: str) -> list[dict]:
 
 
 def banknifty_validation_summary(config: dict) -> tuple[dict | None, bool, str | None]:
-    payload = get("/reports/replay-risk/latest") or {}
+    payload = get("/reports/replay-risk/latest", {"symbol": "BANKNIFTY"}) or {}
     if not payload.get("available"):
         return None, False, payload.get("error") or "No replay risk report available."
 

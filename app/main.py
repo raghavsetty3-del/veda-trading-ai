@@ -22,7 +22,7 @@ from app.services.paper_trading import create_paper_trade, list_paper_trades, pa
 from app.services.paper_replay_validation import create_paper_replay_validation
 from app.services.paper_validation import create_paper_trade_validation
 from app.services.promotion_readiness import build_banknifty_promotion_readiness
-from app.services.replay_reports import banknifty_tuning_report, latest_replay_risk_report, list_banknifty_tuning_reports, list_replay_risk_reports
+from app.services.replay_reports import banknifty_tuning_report, latest_replay_risk_report, list_banknifty_tuning_reports, list_nifty_tuning_reports, list_replay_risk_reports, list_sell_tuning_reports, nifty_tuning_report, sell_tuning_report
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.readiness import build_readiness_report
 from app.services.rule_evidence import build_rule_activation_evidence
@@ -84,8 +84,8 @@ def readiness(db: Session = Depends(get_db)):
 
 
 @app.get("/reports/replay-risk/latest")
-def replay_risk_report_latest(name: str | None = None):
-    return latest_replay_risk_report(name=name)
+def replay_risk_report_latest(name: str | None = None, symbol: str | None = None):
+    return latest_replay_risk_report(name=name, symbol=symbol)
 
 
 @app.get("/reports/replay-risk")
@@ -101,6 +101,26 @@ def banknifty_tuning_reports():
 @app.get("/reports/banknifty-tuning/latest")
 def banknifty_tuning_latest(name: str | None = None):
     return banknifty_tuning_report(name=name)
+
+
+@app.get("/reports/nifty-tuning")
+def nifty_tuning_reports():
+    return list_nifty_tuning_reports()
+
+
+@app.get("/reports/nifty-tuning/latest")
+def nifty_tuning_latest(name: str | None = None):
+    return nifty_tuning_report(name=name)
+
+
+@app.get("/reports/sell-tuning")
+def sell_tuning_reports(symbol: str = "BANKNIFTY"):
+    return list_sell_tuning_reports(symbol=symbol)
+
+
+@app.get("/reports/sell-tuning/latest")
+def sell_tuning_latest(symbol: str = "BANKNIFTY", name: str | None = None):
+    return sell_tuning_report(symbol=symbol, name=name)
 
 
 @app.get("/reports/banknifty-promotion-readiness")

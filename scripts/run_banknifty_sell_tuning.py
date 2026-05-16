@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run replay-only BANKNIFTY sell-side tuning sweeps.
+"""Run replay-only index sell-side tuning sweeps.
 
 This script does not change live or paper-trading settings. It sweeps exit
 management parameters over historical candles and writes an evidence report.
@@ -71,16 +71,17 @@ def _result_row(args: ReplayArgs, replay: dict[str, Any], baseline_sell: dict[st
     }
 
 
-def _write_report(output_dir: Path, payload: dict[str, Any]) -> Path:
+def _write_report(output_dir: Path, symbol: str, payload: dict[str, Any]) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-    path = output_dir / f"banknifty_sell_tuning_{stamp}.json"
+    path = output_dir / f"{symbol.lower()}_sell_tuning_{stamp}.json"
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
     return path
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--symbol", default="BANKNIFTY", help="Index symbol to tune, such as NIFTY or BANKNIFTY.")
     parser.add_argument("--timeframe", default="5m")
     parser.add_argument("--limit", type=int, default=200000)
     parser.add_argument("--min-window", type=int, default=200)
@@ -88,6 +89,7 @@ def main() -> int:
     parser.add_argument("--output-dir", default="data/reports")
     parser.add_argument("--full-grid", action="store_true", help="Run the larger exploratory grid instead of the quick first pass.")
     args = parser.parse_args()
+    symbol = args.symbol.strip().upper()
 
     base = {
         "timeframe": args.timeframe,
@@ -132,7 +134,7 @@ def main() -> int:
                 file=sys.stderr,
                 flush=True,
             )
-            replay = _run_replay(db, replay_args, "BANKNIFTY")
+            replay = _run_replay(db, replay_args, symbol)
             sell = _side_row(replay, "sell")
             if (
                 replay_args.part_book_r_multiple == 1.0
@@ -155,15 +157,17 @@ def main() -> int:
         )
         row["score"] = _score(row.get("sell") or {}, baseline_sell)
 
+    min_sell_trades = max(20, int((baseline_sell.get("trades") or 0) * 0.8))
     viable = [
         row for row in rows
-        if (row.get("sell") or {}).get("trades", 0) >= max(50, int((baseline_sell.get("trades") or 0) * 0.8))
+        if (row.get("sell") or {}).get("trades", 0) >= min_sell_trades
         and float((row.get("sell") or {}).get("net_points") or 0) > 0
         and float((row.get("sell") or {}).get("profit_factor") or 0) >= 1.5
     ]
     ranked = sorted(
         viable,
         key=lambda row: (
+            row["score"],
             row["drawdown_improvement_points"],
             float((row.get("sell") or {}).get("profit_factor") or 0),
             float((row.get("sell") or {}).get("net_points") or 0),
@@ -172,7 +176,8 @@ def main() -> int:
     )
     payload = {
         "generated_at": datetime.utcnow().isoformat(),
-        "purpose": "Replay-only BANKNIFTY sell-side drawdown tuning. No live or paper settings were changed.",
+        "symbol": symbol,
+        "purpose": f"Replay-only {symbol} sell-side drawdown tuning. No live or paper settings were changed.",
         "mode": "full_grid" if args.full_grid else "quick_first_pass",
         "baseline_sell": baseline_sell,
         "baseline_config": {
@@ -181,11 +186,16 @@ def main() -> int:
             "trail_lookback_candles": 3,
             "cooldown_candles": 5,
         },
+        "selection_criteria": {
+            "min_sell_trades": min_sell_trades,
+            "min_sell_profit_factor": 1.5,
+            "require_positive_sell_net_points": True,
+        },
         "search_space": [asdict(item) for item in sweep_configs],
         "top_candidates": ranked[:10],
         "results": sorted(rows, key=lambda row: row["score"], reverse=True),
     }
-    output_path = _write_report(ROOT / args.output_dir, payload)
+    output_path = _write_report(ROOT / args.output_dir, symbol, payload)
     print(json.dumps({
         "output_path": str(output_path),
         "baseline_sell": baseline_sell,

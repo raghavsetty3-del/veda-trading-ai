@@ -118,7 +118,7 @@ def build_banknifty_promotion_readiness(
     top_candidate = (tuning_report.get("top_candidates") or [{}])[0]
     candidate_config = _candidate_config(top_candidate)
 
-    replay_payload = latest_replay_risk_report(name=replay_name)
+    replay_payload = latest_replay_risk_report(name=replay_name, symbol="BANKNIFTY")
     replay_report = replay_payload.get("report") or {}
     replay_config = replay_report.get("config") or {}
     banknifty = _find_banknifty(replay_report)
