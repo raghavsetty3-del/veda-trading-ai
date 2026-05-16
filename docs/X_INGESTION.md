@@ -28,6 +28,29 @@ curl -X POST "http://localhost:8000/ingest/x/configured" \
 
 Each post is archived as a `SourceDocument` with `source_type=x`, then scheduled source extraction can convert it into structured insights.
 
+## Manual Post Ingestion
+
+If the X API token is not available yet, copied posts can be archived manually:
+
+```bash
+curl -X POST "http://localhost:8000/ingest/x/export" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "JustNifty",
+    "posts": [
+      {
+        "post_id": "manual-1",
+        "text": "Copied post text",
+        "created_at": "2026-05-16T09:15:00",
+        "author": "JustNifty",
+        "url": "https://x.com/JustNifty/status/..."
+      }
+    ]
+  }'
+```
+
+Duplicate post URLs are skipped.
+
 ## Guardrails
 
 - X ingestion is read-only.

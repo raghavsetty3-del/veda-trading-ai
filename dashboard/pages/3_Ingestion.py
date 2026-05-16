@@ -85,6 +85,30 @@ if st.button("Run X Ingestion"):
     r = requests.post(f"{API_BASE}/ingest/x/configured", json=payload, timeout=120)
     st.write(r.json())
 
+st.subheader("Manual X/Twitter Posts")
+x_export_username = st.text_input("X Export Username", value="")
+x_sample = [
+    {
+        "post_id": "1",
+        "text": "Sample X post text",
+        "created_at": "2026-05-16T09:15:00",
+        "author": "manual",
+        "url": "",
+    }
+]
+x_raw_posts = st.text_area("X posts JSON", value=json.dumps(x_sample, indent=2), height=180)
+if st.button("Ingest Manual X Posts"):
+    try:
+        posts = json.loads(x_raw_posts)
+        r = requests.post(
+            f"{API_BASE}/ingest/x/export",
+            json={"username": x_export_username.strip().lstrip("@") or "manual-x", "posts": posts},
+            timeout=60,
+        )
+        st.write(r.json())
+    except Exception as exc:
+        st.error(f"Manual X ingestion failed: {exc}")
+
 channel = st.text_input("Telegram channel/export name", value="manual-export")
 sample = [
     {

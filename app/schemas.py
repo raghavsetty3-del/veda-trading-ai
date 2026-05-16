@@ -219,6 +219,19 @@ class XIngestRequest(BaseModel):
     limit: int | None = None
 
 
+class XExportPost(BaseModel):
+    post_id: str | int
+    text: str
+    created_at: str | None = None
+    author: str | None = None
+    url: str | None = None
+
+
+class XExportIngestRequest(BaseModel):
+    username: str
+    posts: list[XExportPost]
+
+
 class ValidationCaseCreate(BaseModel):
     case_code: str
     title: str

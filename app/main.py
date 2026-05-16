@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, BlogBackfillRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperReplayBacktestRequest, PaperReplayValidationRequest, PaperSchedulerRunRequest, PaperTradeReconcileRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramBotIngestRequest, TelegramExportIngestRequest, TelegramLiveIngestRequest, TelegramPublicIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate, XIngestRequest
+from app.schemas import AuditEvent, BacktestRequest, BlogBackfillRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperReplayBacktestRequest, PaperReplayValidationRequest, PaperSchedulerRunRequest, PaperTradeReconcileRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramBotIngestRequest, TelegramExportIngestRequest, TelegramLiveIngestRequest, TelegramPublicIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate, XExportIngestRequest, XIngestRequest
 from app.services.audit import audit
 from app.services.angelone_market_data import angelone_status
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
@@ -36,7 +36,7 @@ from app.services.telegram_bot_ingestion import ingest_bot_telegram
 from app.services.telegram_public_ingestion import ingest_configured_public_telegram, ingest_public_telegram
 from app.services.trade_export_validation import create_trade_export_validation
 from app.services.validation_evidence import create_candle_replay_validation
-from app.services.x_ingestion import ingest_configured_x_usernames, x_status
+from app.services.x_ingestion import ingest_configured_x_usernames, ingest_x_export, x_status
 from app.ingestion.blog import fetch_blog_page
 from app.ingestion.telegram_listener import telegram_status
 
@@ -486,6 +486,11 @@ def ingest_x_status():
 def ingest_x_configured(payload: XIngestRequest | None = None, db: Session = Depends(get_db)):
     payload = payload or XIngestRequest()
     return ingest_configured_x_usernames(db, usernames=payload.usernames, limit=payload.limit)
+
+
+@app.post("/ingest/x/export")
+def ingest_x_export_request(payload: XExportIngestRequest, db: Session = Depends(get_db)):
+    return ingest_x_export(db, payload)
 
 
 @app.get("/insights")

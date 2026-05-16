@@ -2,6 +2,7 @@ import httpx
 
 from app.config import settings
 from app.models import FailedJob
+from app.schemas import XExportIngestRequest
 from app.services.audit import audit
 from app.services.source_archive import archive_source_document
 
@@ -145,4 +146,53 @@ def ingest_configured_x_usernames(db, usernames: list[str] | None = None, limit:
         "errors": errors,
     }
     audit(db, "x.configured_ingest", "Ran configured X ingestion", payload=summary)
+    return summary
+
+
+def ingest_x_export(db, payload: XExportIngestRequest) -> dict:
+    clean_username = payload.username.strip().lstrip("@")
+    if not clean_username:
+        raise ValueError("X username is required")
+
+    created = 0
+    existing = 0
+    items = []
+    for post in payload.posts:
+        post_id = str(post.post_id)
+        source_url = post.url or f"https://x.com/{clean_username}/status/{post_id}"
+        row, was_created, psychology = archive_source_document(
+            db,
+            {
+                "source_type": "x",
+                "source_url": source_url,
+                "source_external_id": post_id,
+                "title": post.text[:120],
+                "author": post.author or clean_username,
+                "raw_text": post.text,
+                "raw_html": None,
+                "media_paths": [],
+            },
+        )
+        items.append({"id": row.id, "source_url": row.source_url, "created": was_created})
+        if was_created:
+            created += 1
+            audit(
+                db,
+                "source.ingested",
+                f"Ingested manual X post: {row.title}",
+                entity_type="source_document",
+                entity_id=str(row.id),
+                payload={"psychology_preview": psychology, "username": clean_username},
+            )
+        else:
+            existing += 1
+
+    summary = {
+        "username": clean_username,
+        "seen": len(payload.posts),
+        "created": created,
+        "existing": existing,
+        "items": items,
+    }
+    audit(db, "x.export_ingested", f"Ingested manual X posts for {clean_username}", payload=summary)
     return summary
