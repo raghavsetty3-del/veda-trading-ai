@@ -9,6 +9,7 @@ Extraction is deterministic by default and can be enriched with OpenAI when `OPE
 - Bias: bullish or bearish text hints
 - Concepts: price action, retracement, 200 EMA, ADX, channels, psychology, risk, profit booking
 - Expected conditions: avoid chasing, wait for retracement, require risk control, avoid choppy markets
+- Chart context when image extraction is enabled: visible timeframes, indicators, price levels, pattern notes, trade context, and caveats
 
 API:
 
@@ -27,3 +28,11 @@ SOURCE_EXTRACTION_ON_START=false
 ```
 
 This keeps newly ingested RSS, Telegram, or manually archived source material flowing into insights and rule suggestions without changing live trading settings.
+
+Chart/image extraction is optional and uses archived `media_paths` from sources. It sends supported URLs directly to OpenAI and converts readable BMP/TIFF/extensionless chart images to PNG before analysis:
+
+```text
+OPENAI_IMAGE_EXTRACTION_ENABLED=true
+OPENAI_IMAGE_EXTRACTION_MAX_IMAGES=3
+OPENAI_IMAGE_FETCH_MAX_BYTES=6000000
+```

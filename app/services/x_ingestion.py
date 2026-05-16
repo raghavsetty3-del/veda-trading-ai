@@ -1,6 +1,7 @@
 import httpx
 
 from app.config import settings
+from app.ingestion.media import allowed_chart_page_url, extract_media_urls_from_html, unique_urls
 from app.models import FailedJob
 from app.schemas import XExportIngestRequest
 from app.services.audit import audit
@@ -61,18 +62,70 @@ def _lookup_user(client: httpx.Client, username: str) -> dict:
     return data
 
 
-def _fetch_user_posts(client: httpx.Client, user_id: str, limit: int) -> list[dict]:
+def _fetch_user_posts(client: httpx.Client, user_id: str, limit: int) -> dict:
     max_results = max(5, min(limit, 100))
     response = client.get(
         f"{X_API_BASE}/users/{user_id}/tweets",
         params={
             "max_results": max_results,
             "exclude": "retweets",
-            "tweet.fields": "created_at,author_id,conversation_id,entities,lang,public_metrics,referenced_tweets,text",
+            "tweet.fields": "attachments,created_at,author_id,conversation_id,entities,lang,public_metrics,referenced_tweets,text",
+            "expansions": "attachments.media_keys",
+            "media.fields": "alt_text,duration_ms,height,media_key,preview_image_url,type,url,width",
         },
     )
     _raise_for_x_error(response)
-    return response.json().get("data") or []
+    return response.json()
+
+
+def _media_by_key(payload: dict) -> dict:
+    return {
+        item.get("media_key"): item
+        for item in (payload.get("includes") or {}).get("media", [])
+        if item.get("media_key")
+    }
+
+
+def _post_entity_urls(post: dict) -> list[str]:
+    urls = []
+    for item in (post.get("entities") or {}).get("urls", []):
+        urls.append(item.get("expanded_url") or item.get("unwound_url") or item.get("url"))
+    return unique_urls(urls)
+
+
+def _post_media_urls(post: dict, media_lookup: dict) -> list[str]:
+    urls = []
+    for key in (post.get("attachments") or {}).get("media_keys", []):
+        media = media_lookup.get(key) or {}
+        urls.append(media.get("url") or media.get("preview_image_url"))
+    return unique_urls(urls)
+
+
+def _linked_page_media_urls(urls: list[str], limit: int = 6) -> list[str]:
+    media = []
+    headers = {"User-Agent": "VedaTradingAI/0.2 chart-media-resolver"}
+    with httpx.Client(timeout=20.0, follow_redirects=True, headers=headers) as client:
+        for url in urls:
+            if not allowed_chart_page_url(url):
+                continue
+            try:
+                response = client.get(url)
+                response.raise_for_status()
+            except Exception:
+                continue
+            media.extend(extract_media_urls_from_html(response.text, str(response.url), limit=limit))
+            if len(media) >= limit:
+                break
+    return unique_urls(media, limit=limit)
+
+
+def _source_text_with_links(text: str, links: list[str], media_urls: list[str]) -> str:
+    parts = [text]
+    if links:
+        parts.append("Linked author URLs:\n" + "\n".join(links[:8]))
+    if media_urls:
+        parts.append("Chart/media URLs:\n" + "\n".join(media_urls[:8]))
+    return "\n\n".join(part for part in parts if part)
 
 
 def ingest_x_username(db, username: str, limit: int | None = None) -> dict:
@@ -85,12 +138,16 @@ def ingest_x_username(db, username: str, limit: int | None = None) -> dict:
     existing = 0
     with httpx.Client(headers=_headers(), timeout=30.0) as client:
         user = _lookup_user(client, clean_username)
-        posts = _fetch_user_posts(client, user["id"], max_items)
+        payload = _fetch_user_posts(client, user["id"], max_items)
+        posts = payload.get("data") or []
+        media_lookup = _media_by_key(payload)
 
     for post in posts:
         post_id = post.get("id")
         text = post.get("text") or ""
         source_url = f"https://x.com/{user['username']}/status/{post_id}"
+        links = _post_entity_urls(post)
+        media_urls = unique_urls([*_post_media_urls(post, media_lookup), *_linked_page_media_urls(links)], limit=8)
         row, was_created, psychology = archive_source_document(
             db,
             {
@@ -99,9 +156,9 @@ def ingest_x_username(db, username: str, limit: int | None = None) -> dict:
                 "source_external_id": post_id,
                 "title": text[:120],
                 "author": user.get("username"),
-                "raw_text": text,
+                "raw_text": _source_text_with_links(text, links, media_urls),
                 "raw_html": None,
-                "media_paths": [],
+                "media_paths": media_urls,
             },
         )
         if was_created:
@@ -112,7 +169,7 @@ def ingest_x_username(db, username: str, limit: int | None = None) -> dict:
                 f"Ingested X post: {row.title}",
                 entity_type="source_document",
                 entity_id=str(row.id),
-                payload={"psychology_preview": psychology, "username": user.get("username")},
+                payload={"psychology_preview": psychology, "username": user.get("username"), "media_count": len(media_urls)},
             )
         else:
             existing += 1
@@ -160,6 +217,8 @@ def ingest_x_export(db, payload: XExportIngestRequest) -> dict:
     for post in payload.posts:
         post_id = str(post.post_id)
         source_url = post.url or f"https://x.com/{clean_username}/status/{post_id}"
+        links = post.expanded_urls or []
+        media_urls = unique_urls([*(post.media_urls or []), *_linked_page_media_urls(links)], limit=8)
         row, was_created, psychology = archive_source_document(
             db,
             {
@@ -168,9 +227,9 @@ def ingest_x_export(db, payload: XExportIngestRequest) -> dict:
                 "source_external_id": post_id,
                 "title": post.text[:120],
                 "author": post.author or clean_username,
-                "raw_text": post.text,
+                "raw_text": _source_text_with_links(post.text, links, media_urls),
                 "raw_html": None,
-                "media_paths": [],
+                "media_paths": media_urls,
             },
         )
         items.append({"id": row.id, "source_url": row.source_url, "created": was_created})
@@ -182,7 +241,7 @@ def ingest_x_export(db, payload: XExportIngestRequest) -> dict:
                 f"Ingested manual X post: {row.title}",
                 entity_type="source_document",
                 entity_id=str(row.id),
-                payload={"psychology_preview": psychology, "username": clean_username},
+                payload={"psychology_preview": psychology, "username": clean_username, "media_count": len(media_urls)},
             )
         else:
             existing += 1

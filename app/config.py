@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_extraction_enabled: bool = False
     openai_extraction_model: str = "gpt-4.1-mini"
+    openai_image_extraction_enabled: bool = False
+    openai_image_extraction_max_images: int = 3
+    openai_image_fetch_max_bytes: int = 6_000_000
 
     blog_feeds: str | None = None
     blog_discovery_urls: str | None = None

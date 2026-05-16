@@ -1,3 +1,5 @@
+import base64
+from io import BytesIO
 import json
 import re
 
@@ -6,7 +8,14 @@ from sqlalchemy.orm import Session
 
 from app.models import ExtractedInsight, SourceDocument
 from app.config import settings
+from app.ingestion.media import is_supported_openai_image_url, unique_urls
 from app.services.psychology import extract_psychology
+
+try:
+    from PIL import Image, UnidentifiedImageError
+except Exception:  # pragma: no cover - optional runtime dependency during local tooling
+    Image = None
+    UnidentifiedImageError = Exception
 
 
 CONCEPT_KEYWORDS = {
@@ -116,6 +125,30 @@ OPENAI_EXTRACTION_SCHEMA = {
                 "requires_200ema_context": {"type": "boolean"},
                 "avoid_choppy_market": {"type": "boolean"},
                 "requires_risk_control": {"type": "boolean"},
+                "chart_analysis": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "has_chart_context": {"type": "boolean"},
+                        "image_count": {"type": "integer"},
+                        "visible_timeframes": {"type": "array", "items": {"type": "string"}},
+                        "visible_indicators": {"type": "array", "items": {"type": "string"}},
+                        "price_levels": {"type": "array", "items": {"type": "string"}},
+                        "pattern_notes": {"type": "array", "items": {"type": "string"}},
+                        "trade_context": {"type": ["string", "null"]},
+                        "caveats": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": [
+                        "has_chart_context",
+                        "image_count",
+                        "visible_timeframes",
+                        "visible_indicators",
+                        "price_levels",
+                        "pattern_notes",
+                        "trade_context",
+                        "caveats",
+                    ],
+                },
             },
             "required": [
                 "wait_for_retracement",
@@ -123,6 +156,7 @@ OPENAI_EXTRACTION_SCHEMA = {
                 "requires_200ema_context",
                 "avoid_choppy_market",
                 "requires_risk_control",
+                "chart_analysis",
             ],
         },
         "confidence": {"type": "number"},
@@ -137,14 +171,34 @@ def extraction_status() -> dict:
         "openai_enabled": settings.openai_extraction_enabled,
         "openai_key_present": bool(settings.openai_api_key),
         "openai_model": settings.openai_extraction_model,
+        "openai_image_enabled": settings.openai_image_extraction_enabled,
+        "openai_image_max_images": settings.openai_image_extraction_max_images,
     }
 
 
-def extract_deterministic_knowledge(text: str | None) -> dict:
+def _chart_analysis_default(media_urls: list[str] | None = None, caveats: list[str] | None = None) -> dict:
+    urls = unique_urls(media_urls or [])
+    notes = list(caveats or [])
+    if urls and not settings.openai_image_extraction_enabled:
+        notes.append("Chart/media URLs were archived; image extraction is disabled.")
+    return {
+        "has_chart_context": bool(urls),
+        "image_count": len(urls),
+        "visible_timeframes": [],
+        "visible_indicators": [],
+        "price_levels": [],
+        "pattern_notes": [],
+        "trade_context": None,
+        "caveats": notes,
+    }
+
+
+def extract_deterministic_knowledge(text: str | None, media_urls: list[str] | None = None) -> dict:
     concepts = extract_concepts(text)
     symbols = extract_symbols(text)
     psychology = extract_psychology(text)
     conditions = expected_conditions(text)
+    conditions["chart_analysis"] = _chart_analysis_default(media_urls)
     confidence = min(1.0, round((len(concepts) * 0.12) + (len(symbols) * 0.1) + 0.2, 3))
     return {
         "bias": extract_bias(text),
@@ -167,17 +221,75 @@ def _response_output_text(data: dict) -> str | None:
     return None
 
 
-def extract_openai_knowledge(text: str | None) -> dict | None:
-    if not settings.openai_extraction_enabled or not settings.openai_api_key or not text:
+def _convert_image_url_to_png_data_url(client: httpx.Client, url: str) -> str | None:
+    if Image is None:
         return None
+    response = client.get(url)
+    response.raise_for_status()
+    if len(response.content) > settings.openai_image_fetch_max_bytes:
+        return None
+    try:
+        image = Image.open(BytesIO(response.content))
+    except UnidentifiedImageError:
+        return None
+    output = BytesIO()
+    image.convert("RGB").save(output, format="PNG")
+    encoded = base64.b64encode(output.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{encoded}"
 
+
+def _openai_image_inputs(media_urls: list[str] | None) -> tuple[list[dict], list[str]]:
+    if not settings.openai_image_extraction_enabled:
+        return [], []
+    max_images = max(0, min(settings.openai_image_extraction_max_images, 12))
+    inputs = []
+    skipped = []
+    urls = unique_urls(media_urls or [])
+    headers = {"User-Agent": "VedaTradingAI/0.2 chart-openai-prep"}
+    with httpx.Client(timeout=30, follow_redirects=True, headers=headers) as client:
+        for url in urls:
+            if len(inputs) >= max_images:
+                break
+            if is_supported_openai_image_url(url):
+                inputs.append({"type": "input_image", "image_url": url, "detail": "high"})
+                continue
+            try:
+                data_url = _convert_image_url_to_png_data_url(client, url)
+            except Exception:
+                data_url = None
+            if data_url:
+                inputs.append({"type": "input_image", "image_url": data_url, "detail": "high"})
+            else:
+                skipped.append(url)
+            continue
+            skipped.append(url)
+    return inputs, skipped
+
+
+def _openai_payload(text: str | None, media_urls: list[str] | None) -> tuple[dict, list[str], int]:
+    image_inputs, skipped_images = _openai_image_inputs(media_urls)
+    chart_note = (
+        "Analyze the attached chart images together with the source text. Capture visible timeframes, "
+        "indicators, price levels, market structure, trend/sideways context, support/resistance, "
+        "entry/target/stop clues, and any uncertainty. Do not invent numbers that are not readable."
+    )
+    source_text = text or ""
+    if media_urls:
+        source_text = f"{source_text}\n\nArchived chart/media URLs:\n" + "\n".join(unique_urls(media_urls))
+    content = [
+        {
+            "type": "input_text",
+            "text": f"{chart_note}\n\nSource text:\n{source_text[:12000]}",
+        }
+    ]
+    content.extend(image_inputs)
     payload = {
         "model": settings.openai_extraction_model,
         "instructions": (
-            "Extract trading-system knowledge from the source text. Focus on NIFTY, BANKNIFTY, "
-            "price action, risk control, psychology, and rule-like market conditions. Return JSON only."
+            "Extract trading-system knowledge from the source text and any chart images. Focus on NIFTY, BANKNIFTY, "
+            "price action, risk control, psychology, rule-like market conditions, and chart evidence. Return JSON only."
         ),
-        "input": text[:12000],
+        "input": [{"role": "user", "content": content}],
         "text": {
             "format": {
                 "type": "json_schema",
@@ -188,8 +300,11 @@ def extract_openai_knowledge(text: str | None) -> dict | None:
         },
         "store": False,
     }
+    return payload, skipped_images, len(image_inputs)
 
-    with httpx.Client(timeout=45) as client:
+
+def _post_openai_payload(payload: dict) -> dict | None:
+    with httpx.Client(timeout=90) as client:
         response = client.post(
             "https://api.openai.com/v1/responses",
             headers={
@@ -203,6 +318,24 @@ def extract_openai_knowledge(text: str | None) -> dict | None:
     if not output_text:
         return None
     return json.loads(output_text)
+
+
+def extract_openai_knowledge(text: str | None, media_urls: list[str] | None = None) -> dict | None:
+    if not settings.openai_extraction_enabled or not settings.openai_api_key or not (text or media_urls):
+        return None
+
+    payload, skipped_images, image_count = _openai_payload(text, media_urls)
+    result = _post_openai_payload(payload)
+    if not result:
+        return None
+    conditions = result.setdefault("expected_conditions", {})
+    chart = conditions.setdefault("chart_analysis", _chart_analysis_default(media_urls))
+    chart["image_count"] = image_count
+    chart["has_chart_context"] = bool(media_urls)
+    if skipped_images:
+        caveats = chart.setdefault("caveats", [])
+        caveats.append(f"Skipped unsupported/unreadable chart images: {len(skipped_images)}")
+    return result
 
 
 def _merge_extractions(base: dict, ai: dict | None) -> dict:
@@ -222,14 +355,22 @@ def _merge_extractions(base: dict, ai: dict | None) -> dict:
         **(base.get("expected_conditions") or {}),
         **(ai.get("expected_conditions") or {}),
     }
+    base_chart = ((base.get("expected_conditions") or {}).get("chart_analysis") or {})
+    ai_chart = ((ai.get("expected_conditions") or {}).get("chart_analysis") or {})
+    if base_chart or ai_chart:
+        chart = {**base_chart, **ai_chart}
+        chart["image_count"] = max(int(base_chart.get("image_count") or 0), int(ai_chart.get("image_count") or 0))
+        chart["has_chart_context"] = bool(base_chart.get("has_chart_context") or ai_chart.get("has_chart_context"))
+        chart["caveats"] = unique_urls([*(base_chart.get("caveats") or []), *(ai_chart.get("caveats") or [])])
+        merged["expected_conditions"]["chart_analysis"] = chart
     merged["confidence"] = max(float(base.get("confidence") or 0), float(ai.get("confidence") or 0))
     return merged
 
 
-def extract_knowledge(text: str | None) -> dict:
-    base = extract_deterministic_knowledge(text)
+def extract_knowledge(text: str | None, media_urls: list[str] | None = None) -> dict:
+    base = extract_deterministic_knowledge(text, media_urls)
     try:
-        return _merge_extractions(base, extract_openai_knowledge(text))
+        return _merge_extractions(base, extract_openai_knowledge(text, media_urls))
     except Exception as exc:
         base["expected_conditions"] = {
             **base.get("expected_conditions", {}),
@@ -242,6 +383,7 @@ def process_source(db: Session, source_id: int) -> dict | None:
     source = db.get(SourceDocument, source_id)
     if not source:
         return None
+    media_urls = source.media_paths or []
     existing = (
         db.query(ExtractedInsight)
         .filter(
@@ -251,7 +393,9 @@ def process_source(db: Session, source_id: int) -> dict | None:
         .order_by(ExtractedInsight.created_at.desc())
         .first()
     )
-    if existing:
+    existing_chart = ((existing.expected_conditions or {}).get("chart_analysis") or {}) if existing else {}
+    needs_chart_reprocess = bool(media_urls) and settings.openai_image_extraction_enabled and not existing_chart.get("has_chart_context")
+    if existing and not needs_chart_reprocess:
         source.processed = True
         db.commit()
         return {
@@ -267,7 +411,7 @@ def process_source(db: Session, source_id: int) -> dict | None:
             "expected_conditions": existing.expected_conditions or {},
             "confidence": existing.confidence,
         }
-    extracted = extract_knowledge(source.raw_text or source.raw_html)
+    extracted = extract_knowledge(source.raw_text or source.raw_html, media_urls)
     insight = ExtractedInsight(source_document_id=source.id, **extracted)
     source.processed = True
     db.add(insight)

@@ -2,6 +2,8 @@ import feedparser
 import httpx
 from bs4 import BeautifulSoup
 
+from app.ingestion.media import extract_media_urls_from_html
+
 
 def clean_html(html: str | None) -> str:
     if not html:
@@ -34,6 +36,7 @@ def fetch_rss_entries(feed_url: str) -> list[dict]:
             "author": clean_author(getattr(e, "author", None)),
             "raw_html": html,
             "raw_text": clean_html(html),
+            "media_paths": extract_media_urls_from_html(html, getattr(e, "link", None)),
             "published_at_raw": getattr(e, "published", None),
         })
     return entries
@@ -63,6 +66,7 @@ def fetch_wordpress_posts(site: str, page: int = 1, per_page: int = 100) -> tupl
             "author": clean_author(author),
             "raw_html": content,
             "raw_text": clean_html(content),
+            "media_paths": extract_media_urls_from_html(content, item.get("link")),
             "published_at_raw": item.get("date_gmt") or item.get("date"),
         })
     return entries, int(total_pages) if total_pages else None
@@ -83,4 +87,5 @@ def fetch_blog_page(url: str) -> dict:
         "author": None,
         "raw_html": html,
         "raw_text": clean_html(html),
+        "media_paths": extract_media_urls_from_html(html, url),
     }

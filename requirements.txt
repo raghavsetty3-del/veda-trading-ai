@@ -14,3 +14,4 @@ pandas==2.2.3
 numpy==2.2.1
 python-multipart==0.0.20
 telethon>=1.36,<2
+Pillow==11.0.0

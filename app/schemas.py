@@ -225,6 +225,8 @@ class XExportPost(BaseModel):
     created_at: str | None = None
     author: str | None = None
     url: str | None = None
+    expanded_urls: list[str] | None = None
+    media_urls: list[str] | None = None
 
 
 class XExportIngestRequest(BaseModel):
