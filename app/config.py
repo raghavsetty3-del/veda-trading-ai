@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     source_extraction_interval_seconds: int = 1800
     source_extraction_limit: int = 25
     source_extraction_on_start: bool = False
+    source_media_enrichment_interval_seconds: int = 3600
+    source_media_enrichment_limit: int = 1000
+    source_media_enrichment_on_start: bool = True
 
     market_data_sources: str | None = None
     market_data_ingest_interval_seconds: int = 900
