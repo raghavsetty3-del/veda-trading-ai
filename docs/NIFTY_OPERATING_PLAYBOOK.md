@@ -75,6 +75,8 @@ In the automated paper-trading path, `long_bias` and `short_bias` are treated as
 - Do not convert a planned trade into a hope-based hold.
 - If structure invalidates, exit or reduce.
 
+Automated paper trading now uses price-action invalidation as the stop basis. Long setups use the recent structure low as the invalidation area when available; short setups use the recent structure high. The exit plan part-books once price moves in favor and trails the remainder, matching the author's guidance to avoid holding without a plan.
+
 ## No-Trade Conditions
 
 - Low ADX/choppy regime.

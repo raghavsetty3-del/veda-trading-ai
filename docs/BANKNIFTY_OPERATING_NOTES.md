@@ -26,6 +26,7 @@ BankNifty uses the same Veda/JustNifty framework as Nifty, but it needs a separa
 - If BankNifty is above 200 EMA but ADX is below its profile threshold, Veda should wait.
 - If price is extended but still inside the BankNifty threshold, Veda may continue evaluating the setup rather than blocking solely due to extension.
 - If price is at a channel or envelope extreme, prefer part booking or waiting for a pullback rather than fresh chase entries.
+- Use price-action invalidation for paper stops: recent structure high for shorts, recent structure low for longs, with the same part-book/trail exit plan used for Nifty.
 
 ## Validation Focus
 

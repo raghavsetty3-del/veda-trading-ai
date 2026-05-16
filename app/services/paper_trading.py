@@ -1,7 +1,9 @@
 from datetime import datetime
 
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 
+from app.config import settings
 from app.models import MarketCandle, PaperTrade, RuleMapping
 from app.services.instrument_profiles import apply_instrument_profile
 from app.services.recovery import get_kill_switch
@@ -128,15 +130,22 @@ def build_paper_trade_plan(db: Session, payload) -> dict:
         side = "sell"
 
     entry_price = float(market_context.get("last_price") or market_context.get("close") or 0)
-    risk_points = float(market_context.get("risk_points") or max(entry_price * 0.003, 1))
+    fallback_risk_points = max(entry_price * 0.003, 1)
+    recent_high = float(market_context.get("recent_high") or 0)
+    recent_low = float(market_context.get("recent_low") or 0)
+    risk_points = float(market_context.get("risk_points") or fallback_risk_points)
     stop_loss = None
     target = None
     if side == "buy":
-        stop_loss = entry_price - risk_points
+        stop_loss = recent_low if recent_low and recent_low < entry_price else entry_price - risk_points
+        risk_points = abs(entry_price - stop_loss) or fallback_risk_points
         target = entry_price + (risk_points * 2)
     elif side == "sell":
-        stop_loss = entry_price + risk_points
+        stop_loss = recent_high if recent_high and recent_high > entry_price else entry_price + risk_points
+        risk_points = abs(entry_price - stop_loss) or fallback_risk_points
         target = entry_price - (risk_points * 2)
+    market_context["risk_points"] = risk_points
+    market_context["stop_basis"] = "price_action_structure"
 
     return {
         "market_context": market_context,
@@ -167,6 +176,19 @@ def create_paper_trade(db: Session, payload) -> dict:
             "reason": f"Setup stance is {plan['setup']['stance']}",
             **plan,
         }
+    exit_plan = None
+    if settings.paper_exit_mode == "author_part_book_trail" and plan["side"] in {"buy", "sell"}:
+        exit_plan = {
+            "mode": "author_part_book_trail",
+            "part_book_r_multiple": settings.paper_part_book_r_multiple,
+            "part_book_fraction": settings.paper_part_book_fraction,
+            "trail_lookback_candles": settings.paper_trail_lookback_candles,
+            "trailing_stop": plan["stop_loss"],
+            "trail_window": [],
+            "partial_exit": None,
+            "partial_realized_pnl": 0.0,
+            "last_reconciled_candle_at": plan["market_context"].get("last_candle_at"),
+        }
     row = PaperTrade(
         symbol=plan["market_context"]["symbol"],
         timeframe=payload.timeframe,
@@ -177,7 +199,12 @@ def create_paper_trade(db: Session, payload) -> dict:
         target=plan["target"],
         quantity=plan["quantity"],
         reason="; ".join(plan["setup"].get("reasons", [])) or plan["setup"]["stance"],
-        context={"market_context": plan["market_context"], "setup": plan["setup"], "rules": plan["rules"]},
+        context={
+            "market_context": plan["market_context"],
+            "setup": plan["setup"],
+            "rules": plan["rules"],
+            "exit_plan": exit_plan,
+        },
     )
     db.add(row)
     db.commit()
@@ -217,8 +244,17 @@ def _entry_candle_at(row: PaperTrade) -> datetime | None:
         return None
 
 
+def _parse_context_time(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00")).replace(tzinfo=None)
+    except ValueError:
+        return None
+
+
 def _open_paper_trade_query(db: Session, symbols: list[str] | None = None, timeframe: str | None = None):
-    closed_statuses = {"cancelled", "closed", "exited", "stopped", "target_hit"}
+    closed_statuses = {"cancelled", "closed", "exited", "stopped", "target_hit", "trailed"}
     query = db.query(PaperTrade).filter(PaperTrade.closed_at.is_(None))
     query = query.filter(~PaperTrade.status.in_(closed_statuses))
     if symbols:
@@ -246,6 +282,83 @@ def _exit_from_candle(row: PaperTrade, candle: MarketCandle) -> tuple[str, float
     return None
 
 
+def _author_exit_from_candle(row: PaperTrade, candle: MarketCandle) -> tuple[str, float, str] | None:
+    context = row.context or {}
+    exit_plan = context.get("exit_plan") or {}
+    if exit_plan.get("mode") != "author_part_book_trail":
+        return _exit_from_candle(row, candle)
+
+    entry = float(row.entry_price)
+    stop = float(row.stop_loss) if row.stop_loss is not None else None
+    if stop is None:
+        return None
+    risk = abs(entry - stop)
+    if risk <= 0:
+        return None
+
+    part_r = max(float(exit_plan.get("part_book_r_multiple") or 1.0), 0.25)
+    part_fraction = min(max(float(exit_plan.get("part_book_fraction") or 0.5), 0.1), 0.9)
+    remaining_fraction = 1 - part_fraction
+    lookback = max(int(exit_plan.get("trail_lookback_candles") or 3), 1)
+    partial_exit = exit_plan.get("partial_exit")
+    partial_realized = float(exit_plan.get("partial_realized_pnl") or 0.0)
+    trailing_stop = float(exit_plan.get("trailing_stop") or stop)
+    trail_window = list(exit_plan.get("trail_window") or [])
+    part_target = entry + (risk * part_r) if row.side == "buy" else entry - (risk * part_r)
+
+    if row.side == "buy":
+        if candle.low <= trailing_stop:
+            active_remaining_fraction = remaining_fraction if partial_exit else 1.0
+            active_partial_realized = partial_realized if partial_exit else 0.0
+            pnl = ((trailing_stop - entry) * row.quantity * active_remaining_fraction) + active_partial_realized
+            status = "trailed" if partial_exit else "stopped"
+            exit_plan["final_realized_pnl"] = round(pnl, 2)
+            context["exit_plan"] = exit_plan
+            row.context = context
+            flag_modified(row, "context")
+            return status, trailing_stop, f"Auto paper reconciliation: author exit {status} on {candle.ts.isoformat()}"
+        if not partial_exit and candle.high >= part_target:
+            partial_realized = (part_target - entry) * row.quantity * part_fraction
+            partial_exit = {"price": part_target, "at": candle.ts.isoformat(), "fraction": part_fraction, "r_multiple": part_r}
+            trailing_stop = max(trailing_stop, entry)
+    elif row.side == "sell":
+        if candle.high >= trailing_stop:
+            active_remaining_fraction = remaining_fraction if partial_exit else 1.0
+            active_partial_realized = partial_realized if partial_exit else 0.0
+            pnl = ((entry - trailing_stop) * row.quantity * active_remaining_fraction) + active_partial_realized
+            status = "trailed" if partial_exit else "stopped"
+            exit_plan["final_realized_pnl"] = round(pnl, 2)
+            context["exit_plan"] = exit_plan
+            row.context = context
+            flag_modified(row, "context")
+            return status, trailing_stop, f"Auto paper reconciliation: author exit {status} on {candle.ts.isoformat()}"
+        if not partial_exit and candle.low <= part_target:
+            partial_realized = (entry - part_target) * row.quantity * part_fraction
+            partial_exit = {"price": part_target, "at": candle.ts.isoformat(), "fraction": part_fraction, "r_multiple": part_r}
+            trailing_stop = min(trailing_stop, entry)
+
+    if partial_exit:
+        trail_value = candle.low if row.side == "buy" else candle.high
+        trail_window.append(trail_value)
+        trail_window = trail_window[-lookback:]
+        if row.side == "buy":
+            trailing_stop = max(trailing_stop, min(trail_window))
+        else:
+            trailing_stop = min(trailing_stop, max(trail_window))
+
+    exit_plan.update({
+        "partial_exit": partial_exit,
+        "partial_realized_pnl": round(partial_realized, 2),
+        "trailing_stop": trailing_stop,
+        "trail_window": trail_window,
+        "last_reconciled_candle_at": candle.ts.isoformat(),
+    })
+    context["exit_plan"] = exit_plan
+    row.context = context
+    flag_modified(row, "context")
+    return None
+
+
 def reconcile_open_paper_trades(
     db: Session,
     symbols: list[str] | None = None,
@@ -262,12 +375,15 @@ def reconcile_open_paper_trades(
         if not entry_candle_at:
             skipped.append({"id": row.id, "symbol": row.symbol, "reason": "missing entry candle timestamp"})
             continue
+        exit_plan = (row.context or {}).get("exit_plan") or {}
+        last_reconciled_at = _parse_context_time(exit_plan.get("last_reconciled_candle_at"))
+        scan_after = last_reconciled_at or entry_candle_at
         candles = (
             db.query(MarketCandle)
             .filter(
                 MarketCandle.symbol == row.symbol,
                 MarketCandle.timeframe == row.timeframe,
-                MarketCandle.ts > entry_candle_at,
+                MarketCandle.ts > scan_after,
             )
             .order_by(MarketCandle.ts.asc())
             .limit(500)
@@ -278,7 +394,7 @@ def reconcile_open_paper_trades(
             continue
 
         for candle in candles:
-            exit_result = _exit_from_candle(row, candle)
+            exit_result = _author_exit_from_candle(row, candle)
             if not exit_result:
                 continue
             status, exit_price, exit_reason = exit_result
@@ -286,7 +402,8 @@ def reconcile_open_paper_trades(
             row.exit_price = exit_price
             row.exit_reason = exit_reason
             row.closed_at = candle.ts
-            row.realized_pnl = _realized_pnl(row, exit_price)
+            final_realized_pnl = ((row.context or {}).get("exit_plan") or {}).get("final_realized_pnl")
+            row.realized_pnl = round(float(final_realized_pnl), 2) if final_realized_pnl is not None else _realized_pnl(row, exit_price)
             row.r_multiple = _r_multiple(row, row.realized_pnl)
             reconciled.append(serialize_paper_trade(row))
             break

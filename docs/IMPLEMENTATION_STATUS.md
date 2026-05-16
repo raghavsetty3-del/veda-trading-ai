@@ -45,7 +45,9 @@ Date: 2026-05-15
 - Paper trades can record exits, realized P&L, and R-multiple.
 - Open paper trades can be reconciled automatically against later stored candles for target/stop exits.
 - Paper scheduler is active with a 250-candle context window, a 5-candle cooldown, and strict JustNifty-aligned LRHR setup gating before opening new trades.
-- Historical paper replay is available for non-live provider-backed outcome checks; the first cooldown sweep favored a 5-candle cooldown for both NIFTY and BANKNIFTY.
+- Paper trades now use author-aligned price-action invalidation stops rather than generic percentage stops.
+- Paper exits now support the author-backed part-book-and-trail plan: book part when price moves in favor, move the balance to a trailing stop, and let structure manage the rest.
+- Historical paper replay is available for non-live provider-backed outcome checks; author-style part-book/trail replay improved both NIFTY and BANKNIFTY risk-adjusted results.
 - Paper-trading observations and closed-trade P&L can now create validation evidence cases.
 - Strategy trade-export CSVs can now create performance validation evidence cases.
 - Failed trade-export evidence can be reviewed as not promoted while preserving the failed result.

@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     paper_trading_quantity: int = 1
     paper_max_open_trades_per_symbol: int = 1
     paper_trade_cooldown_candles: int = 5
+    paper_exit_mode: str = "author_part_book_trail"
+    paper_part_book_r_multiple: float = 1.0
+    paper_part_book_fraction: float = 0.5
+    paper_trail_lookback_candles: int = 3
     paper_trading_on_start: bool = False
     global_kill_switch: bool = False
     max_daily_drawdown_pct: float = 1.0

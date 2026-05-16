@@ -27,6 +27,10 @@ def paper_scheduler_config() -> dict:
         "quantity": settings.paper_trading_quantity,
         "max_open_trades_per_symbol": settings.paper_max_open_trades_per_symbol,
         "cooldown_candles": settings.paper_trade_cooldown_candles,
+        "exit_mode": settings.paper_exit_mode,
+        "part_book_r_multiple": settings.paper_part_book_r_multiple,
+        "part_book_fraction": settings.paper_part_book_fraction,
+        "trail_lookback_candles": settings.paper_trail_lookback_candles,
         "run_on_start": settings.paper_trading_on_start,
     }
 
@@ -49,7 +53,7 @@ def _has_existing_trade_for_candle(db: Session, symbol: str, timeframe: str, las
 
 
 def _open_trade_count_for_symbol(db: Session, symbol: str, timeframe: str) -> int:
-    closed_statuses = {"cancelled", "closed", "exited", "stopped", "target_hit"}
+    closed_statuses = {"cancelled", "closed", "exited", "stopped", "target_hit", "trailed"}
     return (
         db.query(PaperTrade)
         .filter(PaperTrade.symbol == symbol.upper(), PaperTrade.timeframe == timeframe.lower())

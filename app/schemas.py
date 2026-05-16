@@ -151,6 +151,10 @@ class PaperReplayBacktestRequest(BaseModel):
     quantity: int = 1
     max_trades: int = 200
     cooldown_candles: int = 0
+    exit_mode: str = "fixed_target"
+    part_book_r_multiple: float = 1.0
+    part_book_fraction: float = 0.5
+    trail_lookback_candles: int = 3
     include_trades: bool = True
 
 

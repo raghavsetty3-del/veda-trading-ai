@@ -20,6 +20,7 @@ Completed as of 2026-05-15:
 - Author-aligned tuning now requires price action structure, true EMA200 bias, LRHR retracement, and higher-timeframe direction before long/short bias.
 - Pre-EMA200 open paper trades were cancelled as superseded so new evidence starts from the corrected strategy logic.
 - Historical paper replay showed better 90-day metrics with a 5-candle cooldown, now applied to scheduled paper evaluation.
+- Paper risk handling now follows the author's price-action invalidation guidance for stops and part-book/trail guidance for exits.
 - Previous provider-backed open paper trades were cancelled because their retracement was too shallow under the tuned LRHR band.
 - Healthwatch, daily offsite backups, and weekly restore drills are active.
 - Live trading remains disabled.

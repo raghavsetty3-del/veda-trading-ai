@@ -35,6 +35,99 @@ def _exit_from_future(plan: dict, future_candles: list) -> dict | None:
     return None
 
 
+def _author_part_book_trail_exit(
+    plan: dict,
+    future_candles: list,
+    part_book_r_multiple: float,
+    part_book_fraction: float,
+    trail_lookback_candles: int,
+) -> dict | None:
+    side = plan["side"]
+    entry = float(plan["entry_price"])
+    stop = plan["stop_loss"]
+    quantity = int(plan["quantity"])
+    if side not in {"buy", "sell"} or stop is None:
+        return None
+
+    risk = abs(entry - float(stop))
+    if risk <= 0:
+        return None
+
+    fraction = min(max(part_book_fraction, 0.1), 0.9)
+    remaining_fraction = 1 - fraction
+    part_r = max(part_book_r_multiple, 0.25)
+    lookback = max(1, trail_lookback_candles)
+    part_target = entry + (risk * part_r) if side == "buy" else entry - (risk * part_r)
+    trailing_stop = float(stop)
+    partial_realized = 0.0
+    partial_exit = None
+    completed_candles = []
+
+    for offset, candle in enumerate(future_candles, start=1):
+        if side == "buy":
+            if candle.low <= trailing_stop:
+                pnl = ((trailing_stop - entry) * quantity * remaining_fraction) + partial_realized
+                return {
+                    "status": "trailed" if partial_exit else "stopped",
+                    "exit_price": trailing_stop,
+                    "exit_at": candle.ts,
+                    "bars_held": offset,
+                    "realized_pnl": round(pnl, 2),
+                    "partial_exit": partial_exit,
+                    "trailing_stop": trailing_stop,
+                }
+            if not partial_exit and candle.high >= part_target:
+                partial_realized = (part_target - entry) * quantity * fraction
+                partial_exit = {
+                    "price": part_target,
+                    "at": candle.ts.isoformat(),
+                    "fraction": fraction,
+                    "r_multiple": part_r,
+                }
+                trailing_stop = max(trailing_stop, entry)
+        else:
+            if candle.high >= trailing_stop:
+                pnl = ((entry - trailing_stop) * quantity * remaining_fraction) + partial_realized
+                return {
+                    "status": "trailed" if partial_exit else "stopped",
+                    "exit_price": trailing_stop,
+                    "exit_at": candle.ts,
+                    "bars_held": offset,
+                    "realized_pnl": round(pnl, 2),
+                    "partial_exit": partial_exit,
+                    "trailing_stop": trailing_stop,
+                }
+            if not partial_exit and candle.low <= part_target:
+                partial_realized = (entry - part_target) * quantity * fraction
+                partial_exit = {
+                    "price": part_target,
+                    "at": candle.ts.isoformat(),
+                    "fraction": fraction,
+                    "r_multiple": part_r,
+                }
+                trailing_stop = min(trailing_stop, entry)
+
+        if partial_exit:
+            completed_candles.append(candle)
+            window = completed_candles[-lookback:]
+            if side == "buy":
+                trailing_stop = max(trailing_stop, min(item.low for item in window))
+            else:
+                trailing_stop = min(trailing_stop, max(item.high for item in window))
+
+    if partial_exit:
+        return {
+            "status": "open_at_end",
+            "exit_price": None,
+            "exit_at": None,
+            "bars_held": len(future_candles),
+            "realized_pnl": round(partial_realized, 2),
+            "partial_exit": partial_exit,
+            "trailing_stop": trailing_stop,
+        }
+    return None
+
+
 def _r_multiple(plan: dict, realized_pnl: float) -> float | None:
     risk = abs(float(plan["entry_price"]) - float(plan["stop_loss"])) * int(plan["quantity"])
     if risk <= 0:
@@ -59,7 +152,10 @@ def evaluate_historical_paper_replay(db: Session, payload) -> dict:
     max_trades = max(1, payload.max_trades)
     cooldown = max(0, payload.cooldown_candles)
     quantity = max(1, payload.quantity)
-
+    exit_mode = payload.exit_mode
+    part_book_r_multiple = payload.part_book_r_multiple
+    part_book_fraction = payload.part_book_fraction
+    trail_lookback_candles = payload.trail_lookback_candles
     if len(candles) <= min_window:
         return {
             "name": payload.name,
@@ -73,7 +169,13 @@ def evaluate_historical_paper_replay(db: Session, payload) -> dict:
         }
 
     class ReplayPayload:
-        def __init__(self, symbol: str, timeframe: str, market_context: dict, quantity: int):
+        def __init__(
+            self,
+            symbol: str,
+            timeframe: str,
+            market_context: dict,
+            quantity: int,
+        ):
             self.symbol = symbol
             self.timeframe = timeframe
             self.market_context = market_context
@@ -94,7 +196,16 @@ def evaluate_historical_paper_replay(db: Session, payload) -> dict:
             continue
 
         future_candles = candles[index:]
-        exit_result = _exit_from_future(plan, future_candles)
+        if exit_mode == "author_part_book_trail":
+            exit_result = _author_part_book_trail_exit(
+                plan,
+                future_candles,
+                part_book_r_multiple,
+                part_book_fraction,
+                trail_lookback_candles,
+            )
+        else:
+            exit_result = _exit_from_future(plan, future_candles)
         entry_at = window[-1].ts
         trade = {
             "symbol": plan["market_context"]["symbol"],
@@ -117,6 +228,8 @@ def evaluate_historical_paper_replay(db: Session, payload) -> dict:
                 "bars_held": exit_result["bars_held"],
                 "realized_pnl": realized_pnl,
                 "r_multiple": _r_multiple(plan, realized_pnl),
+                "partial_exit": exit_result.get("partial_exit"),
+                "trailing_stop": exit_result.get("trailing_stop"),
             })
             index += exit_result["bars_held"] + cooldown
         else:
@@ -148,6 +261,10 @@ def evaluate_historical_paper_replay(db: Session, payload) -> dict:
         "min_window": min_window,
         "max_trades": max_trades,
         "cooldown_candles": cooldown,
+        "exit_mode": exit_mode,
+        "part_book_r_multiple": part_book_r_multiple,
+        "part_book_fraction": part_book_fraction,
+        "trail_lookback_candles": trail_lookback_candles,
         "blocked_counts": blocked_counts,
         "metrics": {
             "trades": len(trades),
