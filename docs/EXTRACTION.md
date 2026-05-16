@@ -10,6 +10,7 @@ Extraction is deterministic by default and can be enriched with OpenAI when `OPE
 - Concepts: price action, retracement, 200 EMA, ADX, channels, psychology, risk, profit booking
 - Expected conditions: avoid chasing, wait for retracement, require risk control, avoid choppy markets
 - Chart context when image extraction is enabled: visible timeframes, indicators, price levels, pattern notes, trade context, and caveats
+- Author mechanism: mindset, decision process, entry/exit mechanisms, risk logic, timeframe alignment, market-regime filters, automation candidates, and judgment that should stay review-only
 
 API:
 

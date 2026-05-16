@@ -149,6 +149,32 @@ OPENAI_EXTRACTION_SCHEMA = {
                         "caveats",
                     ],
                 },
+                "author_mechanism": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "mindset": {"type": "array", "items": {"type": "string"}},
+                        "decision_process": {"type": "array", "items": {"type": "string"}},
+                        "entry_mechanisms": {"type": "array", "items": {"type": "string"}},
+                        "exit_mechanisms": {"type": "array", "items": {"type": "string"}},
+                        "risk_mechanisms": {"type": "array", "items": {"type": "string"}},
+                        "timeframe_alignment": {"type": "array", "items": {"type": "string"}},
+                        "market_regime_filter": {"type": "array", "items": {"type": "string"}},
+                        "automation_candidates": {"type": "array", "items": {"type": "string"}},
+                        "non_automatable_judgment": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": [
+                        "mindset",
+                        "decision_process",
+                        "entry_mechanisms",
+                        "exit_mechanisms",
+                        "risk_mechanisms",
+                        "timeframe_alignment",
+                        "market_regime_filter",
+                        "automation_candidates",
+                        "non_automatable_judgment",
+                    ],
+                },
             },
             "required": [
                 "wait_for_retracement",
@@ -157,6 +183,7 @@ OPENAI_EXTRACTION_SCHEMA = {
                 "avoid_choppy_market",
                 "requires_risk_control",
                 "chart_analysis",
+                "author_mechanism",
             ],
         },
         "confidence": {"type": "number"},
@@ -193,12 +220,35 @@ def _chart_analysis_default(media_urls: list[str] | None = None, caveats: list[s
     }
 
 
+def _author_mechanism_default(text: str | None = None) -> dict:
+    lower = _lower(text)
+    mindset = []
+    if any(token in lower for token in ["patience", "wait", "sit tight"]):
+        mindset.append("Wait for the setup instead of forcing trades.")
+    if any(token in lower for token in ["discipline", "risk", "stop loss", "stop-loss"]):
+        mindset.append("Protect capital with discipline and predefined risk.")
+    if any(token in lower for token in ["avoid chasing", "do not chase", "chasing"]):
+        mindset.append("Do not chase extended moves.")
+    return {
+        "mindset": mindset,
+        "decision_process": [],
+        "entry_mechanisms": [],
+        "exit_mechanisms": [],
+        "risk_mechanisms": ["Define risk before entry."] if any(token in lower for token in ["risk", "stop loss", "stop-loss"]) else [],
+        "timeframe_alignment": [],
+        "market_regime_filter": ["Avoid low-quality sideways/choppy markets."] if any(token in lower for token in ["sideways", "choppy", "low adx"]) else [],
+        "automation_candidates": [],
+        "non_automatable_judgment": [],
+    }
+
+
 def extract_deterministic_knowledge(text: str | None, media_urls: list[str] | None = None) -> dict:
     concepts = extract_concepts(text)
     symbols = extract_symbols(text)
     psychology = extract_psychology(text)
     conditions = expected_conditions(text)
     conditions["chart_analysis"] = _chart_analysis_default(media_urls)
+    conditions["author_mechanism"] = _author_mechanism_default(text)
     confidence = min(1.0, round((len(concepts) * 0.12) + (len(symbols) * 0.1) + 0.2, 3))
     return {
         "bias": extract_bias(text),
@@ -271,7 +321,7 @@ def _openai_payload(text: str | None, media_urls: list[str] | None) -> tuple[dic
     chart_note = (
         "Analyze the attached chart images together with the source text. Capture visible timeframes, "
         "indicators, price levels, market structure, trend/sideways context, support/resistance, "
-        "entry/target/stop clues, and any uncertainty. Do not invent numbers that are not readable."
+        "entry/target/stop clues, the author's mindset, and any uncertainty. Do not invent numbers that are not readable."
     )
     source_text = text or ""
     if media_urls:
@@ -287,7 +337,9 @@ def _openai_payload(text: str | None, media_urls: list[str] | None) -> tuple[dic
         "model": settings.openai_extraction_model,
         "instructions": (
             "Extract trading-system knowledge from the source text and any chart images. Focus on NIFTY, BANKNIFTY, "
-            "price action, risk control, psychology, rule-like market conditions, and chart evidence. Return JSON only."
+            "price action, risk control, psychology, rule-like market conditions, chart evidence, and the author's "
+            "repeatable trading mechanisms. Separate automatable rules from judgment that should remain review-only. "
+            "Return JSON only."
         ),
         "input": [{"role": "user", "content": content}],
         "text": {
@@ -366,6 +418,24 @@ def _merge_extractions(base: dict, ai: dict | None) -> dict:
         chart["has_chart_context"] = bool(base_chart.get("has_chart_context") or ai_chart.get("has_chart_context"))
         chart["caveats"] = unique_urls([*(base_chart.get("caveats") or []), *(ai_chart.get("caveats") or [])])
         merged["expected_conditions"]["chart_analysis"] = chart
+    base_mechanism = ((base.get("expected_conditions") or {}).get("author_mechanism") or {})
+    ai_mechanism = ((ai.get("expected_conditions") or {}).get("author_mechanism") or {})
+    if base_mechanism or ai_mechanism:
+        keys = [
+            "mindset",
+            "decision_process",
+            "entry_mechanisms",
+            "exit_mechanisms",
+            "risk_mechanisms",
+            "timeframe_alignment",
+            "market_regime_filter",
+            "automation_candidates",
+            "non_automatable_judgment",
+        ]
+        merged["expected_conditions"]["author_mechanism"] = {
+            key: unique_urls([*(base_mechanism.get(key) or []), *(ai_mechanism.get(key) or [])])
+            for key in keys
+        }
     merged["confidence"] = max(float(base.get("confidence") or 0), float(ai.get("confidence") or 0))
     return merged
 
@@ -396,9 +466,11 @@ def process_source(db: Session, source_id: int) -> dict | None:
         .order_by(ExtractedInsight.created_at.desc())
         .first()
     )
-    existing_chart = ((existing.expected_conditions or {}).get("chart_analysis") or {}) if existing else {}
+    existing_conditions = (existing.expected_conditions or {}) if existing else {}
+    existing_chart = (existing_conditions.get("chart_analysis") or {}) if existing else {}
     needs_chart_reprocess = bool(media_urls) and settings.openai_image_extraction_enabled and not existing_chart.get("has_chart_context")
-    if existing and not needs_chart_reprocess:
+    needs_mechanism_reprocess = existing is not None and not existing_conditions.get("author_mechanism")
+    if existing and not (needs_chart_reprocess or needs_mechanism_reprocess):
         source.processed = True
         db.commit()
         return {
