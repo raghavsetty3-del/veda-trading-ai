@@ -45,6 +45,9 @@ def _paper_metrics(db: Session, symbol: str) -> dict:
     else:
         profit_factor = 0.0
         profit_factor_label = "0.0"
+    minimum_review_trades = 20
+    closed_count = len(closed)
+    net_realized_pnl = round(sum(pnl_values), 2)
     return {
         "symbol": symbol.upper(),
         "total_paper_trades": len(rows),
@@ -54,12 +57,15 @@ def _paper_metrics(db: Session, symbol: str) -> dict:
         "open_risk_points": round(open_risk_points, 2),
         "open_reward_points": round(open_reward_points, 2),
         "open_reward_risk_ratio": round(open_reward_points / open_risk_points, 3) if open_risk_points > 0 else None,
-        "closed_paper_trades": len(closed),
-        "minimum_review_trades": 20,
-        "sample_ready": len(closed) >= 20,
+        "closed_paper_trades": closed_count,
+        "minimum_review_trades": minimum_review_trades,
+        "remaining_review_trades": max(0, minimum_review_trades - closed_count),
+        "sample_ready": closed_count >= minimum_review_trades,
         "gross_profit": gross_profit,
         "gross_loss": gross_loss,
-        "net_realized_pnl": round(sum(pnl_values), 2),
+        "net_realized_pnl": net_realized_pnl,
+        "pnl_positive": net_realized_pnl > 0,
+        "forward_review_ready": closed_count >= minimum_review_trades and net_realized_pnl > 0,
         "profit_factor": profit_factor,
         "profit_factor_label": profit_factor_label,
         "closed_win_rate": round(len(wins) / len(pnl_values), 4) if pnl_values else None,

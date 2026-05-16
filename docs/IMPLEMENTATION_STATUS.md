@@ -54,6 +54,7 @@ Date: 2026-05-16
 - Backtest Replay dashboard exposes historical paper replay with author-style part-book/trail metrics.
 - Historical paper replay can now create validation evidence cases. Timestamped-MTF replay evidence passed for both NIFTY and BANKNIFTY using the author part-book/trail exit plan.
 - Live-readiness now includes a required historical paper replay gate, separate from forward paper evidence collection.
+- Paper performance reports now show remaining realized exits, positive-P&L status, and forward-review readiness per instrument.
 - Paper-trading observations and closed-trade P&L can now create validation evidence cases.
 - Strategy trade-export CSVs can now create performance validation evidence cases.
 - Failed trade-export evidence can be reviewed as not promoted while preserving the failed result.

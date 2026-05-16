@@ -56,6 +56,8 @@ def paper_performance_metrics(db: Session, symbols: list[str] | None = None, lim
 
         closed_wins = [value for value in realized_values if value > 0]
         r_values = [row.r_multiple for row in symbol_rows if row.r_multiple is not None]
+        minimum_review_trades = 20
+        realized_count = len(realized_values)
         items.append({
             "symbol": symbol,
             "total_trades": len(symbol_rows),
@@ -66,15 +68,18 @@ def paper_performance_metrics(db: Session, symbols: list[str] | None = None, lim
             "open_reward_points": round(open_reward_points, 2),
             "open_reward_risk_ratio": round(open_reward_points / open_risk_points, 3) if open_risk_points > 0 else None,
             "cancelled_trades": sum(1 for row in symbol_rows if row.status == "cancelled"),
-            "realized_closed_trades": len(realized_values),
-            "minimum_review_trades": 20,
-            "sample_ready": len(realized_values) >= 20,
+            "realized_closed_trades": realized_count,
+            "minimum_review_trades": minimum_review_trades,
+            "remaining_review_trades": max(0, minimum_review_trades - realized_count),
+            "sample_ready": realized_count >= minimum_review_trades,
             "gross_profit": gross_profit,
             "gross_loss": gross_loss,
             "net_realized_pnl": net_pnl,
+            "pnl_positive": net_pnl > 0,
+            "forward_review_ready": realized_count >= minimum_review_trades and net_pnl > 0,
             "profit_factor": profit_factor,
             "profit_factor_label": profit_factor_label,
-            "win_rate": round(len(closed_wins) / len(realized_values), 4) if realized_values else None,
+            "win_rate": round(len(closed_wins) / realized_count, 4) if realized_values else None,
             "average_r_multiple": round(sum(r_values) / len(r_values), 3) if r_values else None,
         })
 
