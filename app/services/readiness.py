@@ -116,6 +116,24 @@ def _latest_successful_audit(db: Session, event_type: str) -> dict | None:
     }
 
 
+def _latest_audit(db: Session, event_type: str) -> dict | None:
+    row = (
+        db.query(AuditLog)
+        .filter(AuditLog.event_type == event_type)
+        .order_by(AuditLog.created_at.desc())
+        .first()
+    )
+    if not row:
+        return None
+    return {
+        "event_type": row.event_type,
+        "severity": row.severity,
+        "message": row.message,
+        "created_at": row.created_at.isoformat(),
+        "payload": row.payload,
+    }
+
+
 def _validation_summary(db: Session) -> dict:
     rows = db.query(ValidationCase).order_by(ValidationCase.created_at.desc()).limit(500).all()
     by_status: dict[str, int] = {}
@@ -243,6 +261,12 @@ def build_readiness_report(db: Session) -> dict:
     non_production_source_counts = _non_production_source_counts(db)
     restore_drill = _latest_successful_audit(db, "ops.restore_drill")
     offsite_backup = _latest_successful_audit(db, "ops.offsite_backup")
+    latest_jobs = {
+        "paper_scheduler": _latest_audit(db, "paper.scheduler_run"),
+        "market_provider_ingest": _latest_audit(db, "market.provider_ingest_configured"),
+        "source_extraction": _latest_audit(db, "extraction.scheduled_process_pending") or _latest_audit(db, "extraction.process_pending"),
+        "blog_ingest": _latest_audit(db, "blog.configured_ingest"),
+    }
     kill_switch = get_kill_switch(db)
 
     gates = [
@@ -370,4 +394,5 @@ def build_readiness_report(db: Session) -> dict:
         "non_production_source_counts": non_production_source_counts,
         "restore_drill": restore_drill,
         "offsite_backup": offsite_backup,
+        "latest_jobs": latest_jobs,
     }

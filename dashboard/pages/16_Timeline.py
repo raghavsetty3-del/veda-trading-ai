@@ -203,6 +203,23 @@ if paper:
         hide_index=True,
     )
 
+latest_jobs = readiness.get("latest_jobs") or {}
+if latest_jobs:
+    st.subheader("Latest Background Jobs")
+    st.dataframe(
+        pd.DataFrame([
+            {
+                "Job": name,
+                "Seen": item.get("created_at") if item else None,
+                "Severity": item.get("severity") if item else None,
+                "Message": item.get("message") if item else "No audit event found",
+            }
+            for name, item in latest_jobs.items()
+        ]),
+        use_container_width=True,
+        hide_index=True,
+    )
+
 non_production = readiness.get("non_production_source_counts", {})
 if non_production:
     with st.expander("Non-production candle sources"):
