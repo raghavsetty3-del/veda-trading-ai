@@ -5,19 +5,22 @@ from app.models import SourceDocument
 
 
 def enrich_source_media(db: Session, source: SourceDocument) -> dict:
+    media_was_missing = source.media_paths is None
     existing = source.media_paths or []
     extracted = extract_media_urls_from_html(source.raw_html, source.source_url)
     merged = unique_urls([*existing, *extracted])
-    changed = merged != existing
+    added = max(0, len(merged) - len(existing))
+    changed = media_was_missing or merged != existing
     if changed:
         source.media_paths = merged
-        source.processed = False
+        if added:
+            source.processed = False
         db.add(source)
     return {
         "source_id": source.id,
         "source_type": source.source_type,
         "media_count": len(merged),
-        "added": max(0, len(merged) - len(existing)),
+        "added": added,
         "changed": changed,
     }
 
