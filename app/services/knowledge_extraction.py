@@ -536,12 +536,20 @@ def process_source(db: Session, source_id: int) -> dict | None:
     return {"source_id": source.id, "insight_id": insight.id, **extracted}
 
 
-def process_pending_sources(db: Session, limit: int = 50) -> dict:
+def process_pending_sources(
+    db: Session,
+    limit: int = 50,
+    worker_index: int | None = None,
+    worker_count: int | None = None,
+) -> dict:
     safe_limit = max(1, min(limit, 500))
+    safe_worker_count = max(1, min(int(worker_count or 1), 16))
+    safe_worker_index = max(0, min(int(worker_index or 0), safe_worker_count - 1))
+    query = db.query(SourceDocument).filter_by(processed=False)
+    if safe_worker_count > 1:
+        query = query.filter(SourceDocument.id.op("%")(safe_worker_count) == safe_worker_index)
     sources = (
-        db.query(SourceDocument)
-        .filter_by(processed=False)
-        .order_by(SourceDocument.media_paths.is_(None), SourceDocument.ingested_at.asc())
+        query.order_by(SourceDocument.media_paths.is_(None), SourceDocument.ingested_at.asc())
         .limit(safe_limit)
         .all()
     )
@@ -551,4 +559,11 @@ def process_pending_sources(db: Session, limit: int = 50) -> dict:
         if result:
             results.append(result)
     reconciled = sum(1 for item in results if item.get("reconciled"))
-    return {"seen": len(sources), "processed": len(results), "reconciled": reconciled, "results": results}
+    return {
+        "seen": len(sources),
+        "processed": len(results),
+        "reconciled": reconciled,
+        "worker_index": safe_worker_index,
+        "worker_count": safe_worker_count,
+        "results": results,
+    }

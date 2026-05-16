@@ -81,6 +81,75 @@ services:
       api:
         condition: service_healthy
     command: ["python", "-m", "app.scheduler"]
+    environment:
+      SOURCE_EXTRACTION_ON_START: "false"
+      SOURCE_EXTRACTION_INTERVAL_SECONDS: "86400"
+    volumes:
+      - ./data:/app/data
+      - ./backups:/backups
+
+  extraction-backlog:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["python", "scripts/run_extraction_backlog.py"]
+    environment:
+      VEDA_API_URL: http://api:8000
+      EXTRACTION_BACKLOG_WORKER_INDEX: "0"
+      EXTRACTION_BACKLOG_WORKER_COUNT: "3"
+      EXTRACTION_BACKLOG_BATCH_LIMIT: ${EXTRACTION_BACKLOG_BATCH_LIMIT:-25}
+      EXTRACTION_BACKLOG_SLEEP_SECONDS: ${EXTRACTION_BACKLOG_SLEEP_SECONDS:-30}
+      EXTRACTION_BACKLOG_DONE_SLEEP_SECONDS: ${EXTRACTION_BACKLOG_DONE_SLEEP_SECONDS:-900}
+      EXTRACTION_BACKLOG_ERROR_SLEEP_SECONDS: ${EXTRACTION_BACKLOG_ERROR_SLEEP_SECONDS:-300}
+    volumes:
+      - ./data:/app/data
+      - ./backups:/backups
+
+  extraction-backlog-1:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["python", "scripts/run_extraction_backlog.py"]
+    environment:
+      VEDA_API_URL: http://api:8000
+      EXTRACTION_BACKLOG_WORKER_INDEX: "1"
+      EXTRACTION_BACKLOG_WORKER_COUNT: "3"
+      EXTRACTION_BACKLOG_BATCH_LIMIT: ${EXTRACTION_BACKLOG_BATCH_LIMIT:-25}
+      EXTRACTION_BACKLOG_SLEEP_SECONDS: ${EXTRACTION_BACKLOG_SLEEP_SECONDS:-30}
+      EXTRACTION_BACKLOG_DONE_SLEEP_SECONDS: ${EXTRACTION_BACKLOG_DONE_SLEEP_SECONDS:-900}
+      EXTRACTION_BACKLOG_ERROR_SLEEP_SECONDS: ${EXTRACTION_BACKLOG_ERROR_SLEEP_SECONDS:-300}
+    volumes:
+      - ./data:/app/data
+      - ./backups:/backups
+
+  extraction-backlog-2:
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.api
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["python", "scripts/run_extraction_backlog.py"]
+    environment:
+      VEDA_API_URL: http://api:8000
+      EXTRACTION_BACKLOG_WORKER_INDEX: "2"
+      EXTRACTION_BACKLOG_WORKER_COUNT: "3"
+      EXTRACTION_BACKLOG_BATCH_LIMIT: ${EXTRACTION_BACKLOG_BATCH_LIMIT:-25}
+      EXTRACTION_BACKLOG_SLEEP_SECONDS: ${EXTRACTION_BACKLOG_SLEEP_SECONDS:-30}
+      EXTRACTION_BACKLOG_DONE_SLEEP_SECONDS: ${EXTRACTION_BACKLOG_DONE_SLEEP_SECONDS:-900}
+      EXTRACTION_BACKLOG_ERROR_SLEEP_SECONDS: ${EXTRACTION_BACKLOG_ERROR_SLEEP_SECONDS:-300}
     volumes:
       - ./data:/app/data
       - ./backups:/backups

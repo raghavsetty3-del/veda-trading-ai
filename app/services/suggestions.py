@@ -1,4 +1,5 @@
 from collections import defaultdict
+import re
 
 from sqlalchemy.orm import Session
 
@@ -121,6 +122,117 @@ def rule_suggestions(db: Session, limit: int = 200) -> list[dict]:
             "status": "review",
         })
     return sorted(suggestions, key=lambda item: (-item["supporting_insights"], item["rule_code"]))
+
+
+MECHANISM_FIELDS = [
+    "automation_candidates",
+    "entry_mechanisms",
+    "exit_mechanisms",
+    "risk_mechanisms",
+    "market_regime_filter",
+    "timeframe_alignment",
+    "decision_process",
+    "mindset",
+    "non_automatable_judgment",
+]
+
+
+def _normalize_mechanism(value: str) -> str:
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    return text[:240]
+
+
+def _mechanism_key(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", " ", value.lower()).strip()
+
+
+def mechanism_suggestions(db: Session, limit: int = 300, min_hits: int = 2) -> dict:
+    safe_limit = max(1, min(limit, 1000))
+    safe_min_hits = max(1, min(min_hits, 25))
+    insights = (
+        db.query(ExtractedInsight)
+        .filter(ExtractedInsight.confidence.isnot(None))
+        .order_by(ExtractedInsight.created_at.desc())
+        .limit(safe_limit)
+        .all()
+    )
+    grouped = defaultdict(lambda: {
+        "mechanism": "",
+        "field": "",
+        "hits": 0,
+        "confidence": 0.0,
+        "source_insight_ids": [],
+        "symbols": set(),
+        "timeframes": set(),
+        "chart_insights": 0,
+        "chart_images": 0,
+    })
+
+    for insight in insights:
+        conditions = insight.expected_conditions or {}
+        mechanism = conditions.get("author_mechanism") or {}
+        if not isinstance(mechanism, dict):
+            continue
+        chart = conditions.get("chart_analysis") or {}
+        chart_images = int(chart.get("image_count") or 0) if isinstance(chart, dict) else 0
+        has_chart = bool((chart or {}).get("has_chart_context") or chart_images)
+        for field in MECHANISM_FIELDS:
+            values = mechanism.get(field) or []
+            if isinstance(values, str):
+                values = [values]
+            for raw_value in values:
+                normalized = _normalize_mechanism(raw_value)
+                key = _mechanism_key(normalized)
+                if not key:
+                    continue
+                item = grouped[(field, key)]
+                item["mechanism"] = normalized
+                item["field"] = field
+                item["hits"] += 1
+                item["confidence"] += insight.confidence or 0.0
+                item["source_insight_ids"].append(insight.id)
+                for symbol in insight.symbols or []:
+                    item["symbols"].add(str(symbol).upper())
+                if insight.timeframe:
+                    item["timeframes"].add(str(insight.timeframe))
+                if has_chart:
+                    item["chart_insights"] += 1
+                    item["chart_images"] += chart_images
+
+    items = []
+    for item in grouped.values():
+        if item["hits"] < safe_min_hits:
+            continue
+        hits = item["hits"]
+        source_ids = item["source_insight_ids"][:25]
+        items.append({
+            "field": item["field"],
+            "mechanism": item["mechanism"],
+            "supporting_insights": hits,
+            "average_confidence": round(item["confidence"] / max(hits, 1), 3),
+            "symbols": sorted(item["symbols"]),
+            "timeframes": sorted(item["timeframes"]),
+            "chart_insights": item["chart_insights"],
+            "chart_images": item["chart_images"],
+            "source_insight_ids": source_ids,
+            "review_status": "candidate" if item["field"] != "non_automatable_judgment" else "review_only",
+        })
+
+    return {
+        "limit": safe_limit,
+        "min_hits": safe_min_hits,
+        "insights_scanned": len(insights),
+        "count": len(items),
+        "items": sorted(
+            items,
+            key=lambda item: (
+                -item["supporting_insights"],
+                item["review_status"],
+                item["field"],
+                item["mechanism"],
+            ),
+        ),
+    }
 
 
 def promote_rule_suggestion(db: Session, rule_code: str, review_note: str | None = None) -> dict | None:

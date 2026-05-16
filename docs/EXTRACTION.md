@@ -30,6 +30,30 @@ SOURCE_EXTRACTION_ON_START=false
 
 This keeps newly ingested RSS, Telegram, or manually archived source material flowing into insights and rule suggestions without changing live trading settings.
 
+For large backlogs, the Docker stack includes a continuous extraction runner:
+
+```bash
+docker compose up -d --build extraction-backlog
+docker logs -f veda-trading-ai-extraction-backlog-1
+```
+
+It calls `/extraction/process-pending` in controlled batches until the archive is complete, then idles and checks again later. It does not alter live trading settings.
+
+```text
+EXTRACTION_BACKLOG_BATCH_LIMIT=25
+EXTRACTION_BACKLOG_SLEEP_SECONDS=30
+EXTRACTION_BACKLOG_DONE_SLEEP_SECONDS=900
+EXTRACTION_BACKLOG_ERROR_SLEEP_SECONDS=300
+```
+
+The compose stack runs three sharded backlog workers (`extraction-backlog`, `extraction-backlog-1`, and `extraction-backlog-2`). Each worker passes its `worker_index` and shared `worker_count` to `/extraction/process-pending`, so simultaneous chart analysis avoids duplicate source rows.
+
+```bash
+docker logs -f veda-trading-ai-extraction-backlog-1
+docker logs -f veda-trading-ai-extraction-backlog-1-1
+docker logs -f veda-trading-ai-extraction-backlog-2-1
+```
+
 Chart/image extraction is optional and uses archived `media_paths` from sources. It sends supported URLs directly to OpenAI and converts readable BMP/TIFF/extensionless chart images to PNG before analysis:
 
 ```text

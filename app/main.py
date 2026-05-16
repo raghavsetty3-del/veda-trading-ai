@@ -31,7 +31,7 @@ from app.services.schema_migrations import ensure_additive_schema
 from app.services.seed import seed_defaults
 from app.services.source_archive import archive_source_document
 from app.services.source_media_enrichment import enrich_sources_media
-from app.services.suggestions import promote_rule_suggestion, rule_suggestions
+from app.services.suggestions import mechanism_suggestions, promote_rule_suggestion, rule_suggestions
 from app.services.telegram_ingestion import ingest_telegram_export
 from app.services.telegram_live_ingestion import ingest_live_telegram
 from app.services.telegram_bot_ingestion import ingest_bot_telegram
@@ -520,9 +520,24 @@ def get_extraction_status():
 
 
 @app.post("/extraction/process-pending")
-def extraction_process_pending(limit: int = 50, db: Session = Depends(get_db)):
-    result = process_pending_sources(db, limit=limit)
-    audit(db, "extraction.process_pending", "Processed pending source documents", payload={"processed": result["processed"], "seen": result["seen"]})
+def extraction_process_pending(
+    limit: int = 50,
+    worker_index: int | None = None,
+    worker_count: int | None = None,
+    db: Session = Depends(get_db),
+):
+    result = process_pending_sources(db, limit=limit, worker_index=worker_index, worker_count=worker_count)
+    audit(
+        db,
+        "extraction.process_pending",
+        "Processed pending source documents",
+        payload={
+            "processed": result["processed"],
+            "seen": result["seen"],
+            "worker_index": result["worker_index"],
+            "worker_count": result["worker_count"],
+        },
+    )
     return result
 
 
@@ -549,6 +564,11 @@ def extraction_process_source(source_id: int, db: Session = Depends(get_db)):
 def suggestions_rules(limit: int = 200, db: Session = Depends(get_db)):
     suggestions = rule_suggestions(db, limit=limit)
     return {"count": len(suggestions), "items": suggestions}
+
+
+@app.get("/suggestions/mechanisms")
+def suggestions_mechanisms(limit: int = 300, min_hits: int = 2, db: Session = Depends(get_db)):
+    return mechanism_suggestions(db, limit=limit, min_hits=min_hits)
 
 
 @app.post("/suggestions/rules/{rule_code}/promote")
