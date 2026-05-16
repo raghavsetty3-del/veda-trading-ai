@@ -36,3 +36,9 @@ OPENAI_IMAGE_EXTRACTION_ENABLED=true
 OPENAI_IMAGE_EXTRACTION_MAX_IMAGES=3
 OPENAI_IMAGE_FETCH_MAX_BYTES=6000000
 ```
+
+Existing archived blog rows can be enriched with chart/media URLs from their saved HTML before extraction:
+
+```bash
+curl -X POST "http://localhost:8000/extraction/media/enrich?source_type=blog&limit=1000"
+```

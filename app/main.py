@@ -29,6 +29,7 @@ from app.services.scenarios import get_scenario, list_scenarios
 from app.services.schema_migrations import ensure_additive_schema
 from app.services.seed import seed_defaults
 from app.services.source_archive import archive_source_document
+from app.services.source_media_enrichment import enrich_sources_media
 from app.services.suggestions import promote_rule_suggestion, rule_suggestions
 from app.services.telegram_ingestion import ingest_telegram_export
 from app.services.telegram_live_ingestion import ingest_live_telegram
@@ -507,6 +508,13 @@ def get_extraction_status():
 def extraction_process_pending(limit: int = 50, db: Session = Depends(get_db)):
     result = process_pending_sources(db, limit=limit)
     audit(db, "extraction.process_pending", "Processed pending source documents", payload={"processed": result["processed"], "seen": result["seen"]})
+    return result
+
+
+@app.post("/extraction/media/enrich")
+def extraction_enrich_media(source_type: str | None = None, limit: int = 100, only_missing: bool = True, db: Session = Depends(get_db)):
+    result = enrich_sources_media(db, source_type=source_type, limit=limit, only_missing=only_missing)
+    audit(db, "extraction.media_enrich", "Enriched source chart/media URLs", payload=result)
     return result
 
 
