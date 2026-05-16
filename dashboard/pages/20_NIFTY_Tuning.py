@@ -137,6 +137,7 @@ if top_candidates:
     best_candidate = top_candidates[0]
     best_config = candidate_config(best_candidate)
     scheduler_config = get("/paper/scheduler") or {}
+    effective_scheduler = (scheduler_config.get("effective_exit_by_symbol") or {}).get("NIFTY") or scheduler_config
     validation_payload = get("/reports/replay-risk/latest", {"symbol": "NIFTY"}) or {}
     validation_report = validation_payload.get("report") or {}
     validation_config = validation_report.get("config") or {}
@@ -166,7 +167,7 @@ if top_candidates:
     else:
         st.info("No NIFTY replay validation is available yet.")
 
-    st.dataframe(pd.DataFrame(comparison_rows(scheduler_config, best_config)), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(comparison_rows(effective_scheduler, best_config)), use_container_width=True, hide_index=True)
     st.text("NIFTY candidate env values for later per-symbol promotion")
     st.code(env_block(best_config), language="dotenv")
 

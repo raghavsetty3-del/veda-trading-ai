@@ -6,6 +6,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from app.config import settings
 from app.models import MarketCandle, PaperTrade, RuleMapping
 from app.services.instrument_profiles import apply_instrument_profile
+from app.services.paper_exit_config import paper_exit_config_for_symbol
 from app.services.recovery import get_kill_switch
 from app.services.rules import evaluate_rule, evaluate_setup
 
@@ -181,13 +182,16 @@ def create_paper_trade(db: Session, payload) -> dict:
             "reason": f"Setup stance is {plan['setup']['stance']}",
             **plan,
         }
+    symbol = plan["market_context"]["symbol"]
+    exit_config = paper_exit_config_for_symbol(symbol)
     exit_plan = None
-    if settings.paper_exit_mode == "author_part_book_trail" and plan["side"] in {"buy", "sell"}:
+    if exit_config.get("exit_mode") == "author_part_book_trail" and plan["side"] in {"buy", "sell"}:
         exit_plan = {
             "mode": "author_part_book_trail",
-            "part_book_r_multiple": settings.paper_part_book_r_multiple,
-            "part_book_fraction": settings.paper_part_book_fraction,
-            "trail_lookback_candles": settings.paper_trail_lookback_candles,
+            "part_book_r_multiple": exit_config["part_book_r_multiple"],
+            "part_book_fraction": exit_config["part_book_fraction"],
+            "trail_lookback_candles": exit_config["trail_lookback_candles"],
+            "config_source": exit_config.get("source", "global"),
             "trailing_stop": plan["stop_loss"],
             "trail_window": [],
             "partial_exit": None,

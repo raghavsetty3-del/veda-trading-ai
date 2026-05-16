@@ -168,6 +168,7 @@ if top_candidates:
     best_candidate = top_candidates[0]
     best_config = candidate_config(best_candidate)
     scheduler_config = get("/paper/scheduler") or {}
+    effective_scheduler = (scheduler_config.get("effective_exit_by_symbol") or {}).get("BANKNIFTY") or scheduler_config
     validation_symbol, validation_matches, validation_error = banknifty_validation_summary(best_config)
 
     st.caption("Review only. This page does not update paper settings, live settings, .env, or the running scheduler.")
@@ -186,7 +187,7 @@ if top_candidates:
     candidate_cols[3].metric("Validation PF", validation_metrics.get("profit_factor_label", "N/A"))
     candidate_cols[4].metric("Validation Sell PF", validation_sell.get("profit_factor_label", "N/A"))
 
-    compare_frame = pd.DataFrame(comparison_rows(scheduler_config, best_config))
+    compare_frame = pd.DataFrame(comparison_rows(effective_scheduler, best_config))
     st.dataframe(compare_frame, use_container_width=True, hide_index=True)
 
     st.text("Candidate env values for later manual promotion")

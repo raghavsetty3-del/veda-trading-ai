@@ -88,6 +88,7 @@ class Settings(BaseSettings):
     paper_part_book_r_multiple: float = 1.0
     paper_part_book_fraction: float = 0.5
     paper_trail_lookback_candles: int = 3
+    paper_symbol_exit_overrides: str | None = None
     paper_trading_on_start: bool = False
     global_kill_switch: bool = False
     max_daily_drawdown_pct: float = 1.0

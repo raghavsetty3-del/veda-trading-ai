@@ -125,6 +125,7 @@ def build_banknifty_promotion_readiness(
     validation_metrics = (banknifty or {}).get("metrics") or {}
     validation_sell = _side_metrics(banknifty, "sell")
     scheduler = paper_scheduler_config()
+    effective_scheduler = (scheduler.get("effective_exit_by_symbol") or {}).get("BANKNIFTY") or scheduler
     performance = paper_performance_metrics(db, symbols=["BANKNIFTY"], limit=500)
     paper = _paper_item(performance)
     author_sources = _author_source_count(db)
@@ -202,8 +203,8 @@ def build_banknifty_promotion_readiness(
     paper_gates = [
         _gate(
             "paper_scheduler_matches_candidate",
-            _config_matches(candidate_config, scheduler),
-            f"Current paper scheduler {scheduler}; candidate {candidate_config}",
+            _config_matches(candidate_config, effective_scheduler),
+            f"Current paper scheduler {effective_scheduler}; candidate {candidate_config}",
         ),
         _gate(
             "forward_paper_sample_ready",
@@ -255,6 +256,7 @@ def build_banknifty_promotion_readiness(
         "candidate_config": candidate_config,
         "candidate_env": _env_values(candidate_config),
         "current_paper_scheduler": scheduler,
+        "effective_paper_scheduler": effective_scheduler,
         "tuning_report": {
             "name": tuning_payload.get("name"),
             "available": tuning_payload.get("available"),
