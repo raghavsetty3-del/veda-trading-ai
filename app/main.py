@@ -527,10 +527,13 @@ def extraction_process_pending(limit: int = 50, db: Session = Depends(get_db)):
 
 
 @app.post("/extraction/media/enrich")
-def extraction_enrich_media(source_type: str | None = None, limit: int = 100, only_missing: bool = True, db: Session = Depends(get_db)):
+def extraction_enrich_media(source_type: str | None = None, limit: int = 100, only_missing: bool = True, include_items: bool = True, db: Session = Depends(get_db)):
     result = enrich_sources_media(db, source_type=source_type, limit=limit, only_missing=only_missing)
-    audit(db, "extraction.media_enrich", "Enriched source chart/media URLs", payload=result)
-    return result
+    summary = {key: result[key] for key in ["seen", "changed", "media_added"]}
+    audit(db, "extraction.media_enrich", "Enriched source chart/media URLs", payload=summary)
+    if include_items:
+        return result
+    return summary
 
 
 @app.post("/extraction/sources/{source_id}")

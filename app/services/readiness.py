@@ -209,6 +209,24 @@ def _latest_audit(db: Session, event_type: str) -> dict | None:
     }
 
 
+def _latest_audit_any(db: Session, event_types: list[str]) -> dict | None:
+    row = (
+        db.query(AuditLog)
+        .filter(AuditLog.event_type.in_(event_types))
+        .order_by(AuditLog.created_at.desc())
+        .first()
+    )
+    if not row:
+        return None
+    return {
+        "event_type": row.event_type,
+        "severity": row.severity,
+        "message": row.message,
+        "created_at": row.created_at.isoformat(),
+        "payload": row.payload,
+    }
+
+
 def _validation_summary(db: Session) -> dict:
     rows = db.query(ValidationCase).order_by(ValidationCase.created_at.desc()).limit(500).all()
     by_status: dict[str, int] = {}
@@ -487,8 +505,8 @@ def build_readiness_report(db: Session) -> dict:
     latest_jobs = {
         "paper_scheduler": _latest_audit(db, "paper.scheduler_run"),
         "market_provider_ingest": _latest_audit(db, "market.provider_ingest_configured"),
-        "source_extraction": _latest_audit(db, "extraction.scheduled_process_pending") or _latest_audit(db, "extraction.process_pending"),
-        "source_media_enrichment": _latest_audit(db, "extraction.scheduled_media_enrichment"),
+        "source_extraction": _latest_audit_any(db, ["extraction.scheduled_process_pending", "extraction.process_pending"]),
+        "source_media_enrichment": _latest_audit_any(db, ["extraction.scheduled_media_enrichment", "extraction.media_enrich"]),
         "blog_ingest": _latest_audit(db, "blog.configured_ingest"),
         "telegram_bot_ingest": _latest_audit(db, "telegram.bot_ingested"),
         "telegram_public_ingest": _latest_audit(db, "telegram.public_ingested"),
