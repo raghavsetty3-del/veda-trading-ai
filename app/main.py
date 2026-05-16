@@ -14,6 +14,7 @@ from app.services.instrument_profiles import PROFILES, apply_instrument_profile,
 from app.services.knowledge_extraction import extraction_status, process_pending_sources, process_source
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
 from app.services.market_provider import ingest_configured_market_sources, ingest_market_source, market_provider_status
+from app.services.ml_analysis import ml_snapshot
 from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
 from app.services.paper_evidence_state import build_paper_evidence_review, build_paper_evidence_snapshot, list_paper_evidence_history, record_paper_evidence_snapshot
 from app.services.paper_replay import evaluate_historical_paper_replay
@@ -241,6 +242,20 @@ def create_market_snapshot(payload: MarketSnapshotRequest, db: Session = Depends
     snapshot = market_snapshot(db, symbol=payload.symbol, timeframe=payload.timeframe, limit=payload.limit)
     audit(db, "market.snapshot", f"Created {snapshot['symbol']} market snapshot", payload={"symbol": snapshot["symbol"], "timeframe": snapshot["timeframe"], "candles": snapshot["candles"], "ready": snapshot["ready"]})
     return snapshot
+
+
+@app.get("/ml/snapshot")
+def create_ml_snapshot(symbol: str = "NIFTY", timeframe: str = "5m", limit: int = 250, db: Session = Depends(get_db)):
+    snapshot = market_snapshot(db, symbol=symbol, timeframe=timeframe, limit=limit)
+    result = ml_snapshot(
+        db,
+        symbol=symbol,
+        timeframe=timeframe,
+        limit=limit,
+        market_context=snapshot.get("market_context") or {},
+    )
+    audit(db, "ml.snapshot", f"Created ML analysis snapshot for {symbol}", payload=result)
+    return result
 
 
 @app.get("/market/provider/status")

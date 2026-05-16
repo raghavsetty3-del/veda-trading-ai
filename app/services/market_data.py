@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.models import MarketCandle
 from app.services.instrument_profiles import apply_instrument_profile
+from app.services.ml_analysis import analyze_candles
 
 MAX_BULK_CANDLE_IMPORT = 20000
 MAX_CANDLE_QUERY_LIMIT = 10000
@@ -272,6 +273,7 @@ def market_snapshot(db: Session, symbol: str, timeframe: str = "5m", limit: int 
         timeframe,
         candle_market_context(symbol, timeframe, candles),
     )
+    market_context["ml_analysis"] = analyze_candles(symbol, timeframe, candles, market_context)
     return {
         "symbol": market_context["symbol"],
         "timeframe": timeframe.lower(),

@@ -56,6 +56,8 @@ def evaluate_setup(market_context: dict, rule_results: list[dict]) -> dict:
     short_score = 0
     risk_flags = []
     reasons = []
+    ml = market_context.get("ml_analysis") or {}
+    ml_author_alignment = ml.get("author_alignment") or {}
     has_bullish_structure = "RULE-BULLISH-PRICE-ACTION" in matched
     has_bearish_structure = "RULE-BEARISH-PRICE-ACTION" in matched
     has_long_ema_bias = "RULE-LONG-EMA-BIAS" in matched
@@ -97,6 +99,14 @@ def evaluate_setup(market_context: dict, rule_results: list[dict]) -> dict:
         risk_flags.append("Emotional/revenge-trading state blocks new trades.")
     if "RULE-PART-BOOK-AT-EXTREME" in matched:
         risk_flags.append("Price is at an extreme; prefer part booking or avoid fresh chase entries.")
+    if ml.get("regime") == "choppy_compression":
+        risk_flags.append("ML regime filter detects compression/chop; wait for a cleaner author setup.")
+    if float(ml.get("risk_score") or 0) >= 0.7:
+        risk_flags.append("ML risk score is elevated; avoid low-quality chase entries.")
+    if ml_author_alignment.get("score") is not None and float(ml_author_alignment.get("score") or 0) < 0.6:
+        risk_flags.append("ML author-alignment score is below review threshold.")
+    if ml.get("opportunity_score") is not None:
+        reasons.append(f"ML opportunity score: {ml.get('opportunity_score')}.")
     if (has_bullish_structure and has_long_ema_bias) or (has_bearish_structure and has_short_ema_bias):
         if not has_lrhr_retracement:
             risk_flags.append("Price is outside the LRHR retracement zone; wait for a cleaner pullback.")
@@ -139,5 +149,6 @@ def evaluate_setup(market_context: dict, rule_results: list[dict]) -> dict:
         "reasons": reasons,
         "matched_rules": sorted(matched),
         "failed_rules": sorted(failed),
+        "ml_analysis": ml,
         "market_context": market_context,
     }

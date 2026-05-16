@@ -43,3 +43,9 @@ Existing archived blog rows can be enriched with chart/media URLs from their sav
 ```bash
 curl -X POST "http://localhost:8000/extraction/media/enrich?source_type=blog&limit=1000"
 ```
+
+The strategy evaluator also includes a conservative ML-style analysis layer for regime, trend, volatility, pullback quality, author-rule alignment, and anomaly risk. This layer is advisory and can block weak paper setups, but it does not enable live trading or override required author-rule gates:
+
+```bash
+curl "http://localhost:8000/ml/snapshot?symbol=NIFTY&timeframe=5m&limit=250"
+```
