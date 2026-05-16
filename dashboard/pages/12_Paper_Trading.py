@@ -19,7 +19,7 @@ def get(path, params=None):
         return None
 
 
-def post(path, payload):
+def post(path, payload=None):
     try:
         response = requests.post(f"{API_BASE}{path}", json=payload, timeout=8)
         response.raise_for_status()
@@ -65,6 +65,51 @@ if performance_items:
     st.dataframe(pd.DataFrame(performance_items), use_container_width=True)
 else:
     st.info("No paper performance metrics yet.")
+
+st.subheader("Author Context")
+context_limit = st.number_input("Context Candle Limit", min_value=20, max_value=500, value=250, step=10)
+if st.button("Refresh Author Context"):
+    snapshot = post(
+        "/market/snapshot",
+        {
+            "symbol": symbol,
+            "timeframe": timeframe,
+            "limit": int(context_limit),
+        },
+    )
+    if snapshot:
+        context = snapshot.get("market_context", {})
+        setup_payload = post("/strategy/evaluate-setup", {"market_context": context}) or {}
+        setup = setup_payload.get("setup", {})
+
+        cols = st.columns(5)
+        cols[0].metric("Ready", str(snapshot.get("ready")))
+        cols[1].metric("Entry Structure", context.get("market_structure"))
+        cols[2].metric("LRHR %", context.get("retracement_pct"))
+        cols[3].metric("EMA200", "Above" if context.get("price_above_ema200") else "Below")
+        cols[4].metric("Stance", setup.get("stance", "unknown"))
+
+        htf_cols = st.columns(4)
+        htf_cols[0].metric("HTF Bias", context.get("higher_timeframe_bias"))
+        htf_cols[1].metric("HTF Agreement", context.get("higher_timeframe_agreement", "fallback"))
+        htf_cols[2].metric("HTF Source", context.get("higher_timeframe_bias_source"))
+        htf_cols[3].metric("ADX", context.get("adx"))
+
+        higher_timeframe_context = context.get("higher_timeframe_context") or []
+        if higher_timeframe_context:
+            st.dataframe(pd.DataFrame(higher_timeframe_context), use_container_width=True)
+
+        if setup.get("risk_flags"):
+            for flag in setup["risk_flags"]:
+                st.warning(flag)
+        elif setup:
+            st.success("No blocking risk flags for this context.")
+
+        with st.expander("Full snapshot context"):
+            st.json(snapshot)
+        if setup_payload:
+            with st.expander("Full setup evaluation"):
+                st.json(setup_payload)
 
 st.subheader("Create Simulated Trade")
 with st.form("paper_trade"):
