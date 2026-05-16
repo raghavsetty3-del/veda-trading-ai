@@ -98,6 +98,19 @@ def comparison_rows(current: dict, candidate: dict) -> list[dict]:
     return rows
 
 
+def gate_rows(gates: list[dict], area: str) -> list[dict]:
+    return [
+        {
+            "Area": area,
+            "Gate": item.get("gate"),
+            "Required": "Yes" if item.get("required", True) else "No",
+            "Ready": "Yes" if item.get("ready") else "No",
+            "Detail": item.get("detail"),
+        }
+        for item in gates
+    ]
+
+
 def banknifty_validation_summary(config: dict) -> tuple[dict | None, bool, str | None]:
     payload = get("/reports/replay-risk/latest") or {}
     if not payload.get("available"):
@@ -209,6 +222,46 @@ if top_candidates:
         st.dataframe(pd.DataFrame(validation_rows), use_container_width=True, hide_index=True)
 else:
     st.info("No candidate is available to review.")
+
+st.subheader("Promotion Readiness")
+promotion = get("/reports/banknifty-promotion-readiness") or {}
+if promotion:
+    readiness_cols = st.columns(4)
+    readiness_cols[0].metric(
+        "Paper Candidate Review",
+        "Ready" if promotion.get("ready_for_paper_candidate_review") else "Blocked",
+    )
+    readiness_cols[1].metric(
+        "Live Candidate Review",
+        "Ready" if promotion.get("ready_for_live_candidate_review") else "Blocked",
+    )
+    readiness_cols[2].metric(
+        "Paper Blocking Gates",
+        len(promotion.get("paper_candidate_blocking_gates") or []),
+    )
+    readiness_cols[3].metric(
+        "Live Blocking Gates",
+        len(promotion.get("live_candidate_blocking_gates") or []),
+    )
+
+    blocking = promotion.get("live_candidate_blocking_gates") or []
+    if blocking:
+        st.warning("Live candidate review remains blocked by: " + ", ".join(blocking))
+    else:
+        st.success("Live candidate review gates are clear. Keep live trading disabled until explicit manual approval.")
+
+    gates = []
+    gates.extend(gate_rows(promotion.get("replay_gates") or [], "Replay"))
+    gates.extend(gate_rows(promotion.get("paper_gates") or [], "Forward Paper"))
+    if gates:
+        st.dataframe(pd.DataFrame(gates), use_container_width=True, hide_index=True)
+
+    candidate_env = promotion.get("candidate_env") or {}
+    if candidate_env:
+        st.text("Review-only candidate env values")
+        st.code("\n".join(f"{key}={value}" for key, value in candidate_env.items()), language="dotenv")
+else:
+    st.info("Promotion readiness is not available yet.")
 
 st.subheader("All Results")
 if results:
