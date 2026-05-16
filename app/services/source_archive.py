@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 
-from app.models import ExtractedInsight, SourceDocument
+from app.models import SourceDocument
 from app.services.psychology import extract_psychology
 
 
@@ -31,6 +31,4 @@ def archive_source_document(db: Session, data: dict) -> tuple[SourceDocument, bo
     db.commit()
     db.refresh(row)
     psychology = extract_psychology(row.raw_text)
-    db.add(ExtractedInsight(source_document_id=row.id, psychology=psychology, concepts=[], confidence=None))
-    db.commit()
     return row, True, psychology

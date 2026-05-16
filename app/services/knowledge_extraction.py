@@ -242,6 +242,31 @@ def process_source(db: Session, source_id: int) -> dict | None:
     source = db.get(SourceDocument, source_id)
     if not source:
         return None
+    existing = (
+        db.query(ExtractedInsight)
+        .filter(
+            ExtractedInsight.source_document_id == source.id,
+            ExtractedInsight.confidence.isnot(None),
+        )
+        .order_by(ExtractedInsight.created_at.desc())
+        .first()
+    )
+    if existing:
+        source.processed = True
+        db.commit()
+        return {
+            "source_id": source.id,
+            "insight_id": existing.id,
+            "already_processed": True,
+            "reconciled": True,
+            "bias": existing.bias,
+            "timeframe": existing.timeframe,
+            "symbols": existing.symbols or [],
+            "concepts": existing.concepts or [],
+            "psychology": existing.psychology or {},
+            "expected_conditions": existing.expected_conditions or {},
+            "confidence": existing.confidence,
+        }
     extracted = extract_knowledge(source.raw_text or source.raw_html)
     insight = ExtractedInsight(source_document_id=source.id, **extracted)
     source.processed = True
@@ -265,4 +290,5 @@ def process_pending_sources(db: Session, limit: int = 50) -> dict:
         result = process_source(db, source.id)
         if result:
             results.append(result)
-    return {"seen": len(sources), "processed": len(results), "results": results}
+    reconciled = sum(1 for item in results if item.get("reconciled"))
+    return {"seen": len(sources), "processed": len(results), "reconciled": reconciled, "results": results}

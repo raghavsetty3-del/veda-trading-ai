@@ -104,6 +104,8 @@ def _non_production_source_counts(db: Session) -> dict:
 def _source_archive_summary(db: Session) -> dict:
     total = db.query(SourceDocument).count()
     processed = db.query(SourceDocument).filter(SourceDocument.processed.is_(True)).count()
+    full_insights = db.query(ExtractedInsight).filter(ExtractedInsight.confidence.isnot(None)).count()
+    preview_insights = db.query(ExtractedInsight).filter(ExtractedInsight.confidence.is_(None)).count()
     by_type = {
         source_type: count
         for source_type, count in (
@@ -126,6 +128,8 @@ def _source_archive_summary(db: Session) -> dict:
         "processed_sources": processed,
         "pending_sources": max(0, total - processed),
         "insights": db.query(ExtractedInsight).count(),
+        "full_insights": full_insights,
+        "archive_preview_insights": preview_insights,
         "by_type": by_type,
         "blog_authors": blog_authors,
     }

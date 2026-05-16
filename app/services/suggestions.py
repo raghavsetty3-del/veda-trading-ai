@@ -88,6 +88,7 @@ def serialize_rule(row: RuleMapping) -> dict:
 def rule_suggestions(db: Session, limit: int = 200) -> list[dict]:
     insights = (
         db.query(ExtractedInsight)
+        .filter(ExtractedInsight.confidence.isnot(None))
         .order_by(ExtractedInsight.created_at.desc())
         .limit(max(1, min(limit, 500)))
         .all()
