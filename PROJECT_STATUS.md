@@ -22,6 +22,7 @@ Last updated: 2026-05-16
 - Scheduled paper trading uses per-symbol paper exit overrides for NIFTY and BANKNIFTY.
 - Promotion readiness is exposed per symbol; live promotion remains blocked until forward paper evidence is ready.
 - Promotion drawdown gates use symbol-scaled tuning evidence so NIFTY is not judged by BANKNIFTY-sized point thresholds.
+- System Evidence dashboard shows latest scheduler, ingestion, extraction, X/blog, and paper-exit override audit status.
 
 ## Current Evidence
 
@@ -48,7 +49,6 @@ Last updated: 2026-05-16
 
 ## Next Actions That Do Not Depend On Market Sessions
 
-- Review per-symbol promotion readiness in the System Evidence dashboard after deployment.
-- Add audit visibility for paper-setting override changes.
-- Add lightweight unit coverage for symbol exit override parsing and symbol promotion readiness helpers.
+- Keep reviewing per-symbol promotion readiness and latest background jobs in the System Evidence dashboard.
+- Add deeper chart-insight quality sampling so extracted chart mechanisms can be reviewed faster.
 - Continue chart extraction and author-mechanism enrichment in the background.

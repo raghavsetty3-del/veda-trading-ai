@@ -11,6 +11,18 @@ LOT_SIZES = {
     "BANKNIFTY": 30,
 }
 
+JOB_LABELS = {
+    "paper_scheduler": "Paper Scheduler",
+    "market_provider_ingest": "Market Provider Ingest",
+    "source_extraction": "Source Extraction",
+    "source_media_enrichment": "Chart Media Enrichment",
+    "blog_ingest": "Blog Ingest",
+    "telegram_bot_ingest": "Telegram Bot Ingest",
+    "telegram_public_ingest": "Telegram Public Ingest",
+    "x_ingest": "X Ingest",
+    "paper_symbol_exit_overrides": "Paper Exit Overrides",
+}
+
 st.title("System Evidence")
 
 
@@ -22,6 +34,35 @@ def get(path, params=None):
     except Exception as exc:
         st.error(f"API error: {exc}")
         return None
+
+
+def payload_summary(payload: dict) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    fields = []
+    for key in [
+        "created",
+        "updated",
+        "received",
+        "processed",
+        "seen",
+        "skipped",
+        "blocked",
+        "changed",
+        "media_added",
+        "feeds",
+        "configured_sources",
+        "worker_index",
+        "worker_count",
+    ]:
+        if key in payload:
+            fields.append(f"{key}={payload.get(key)}")
+    if payload.get("symbols"):
+        fields.append("symbols=" + ",".join(str(item) for item in payload.get("symbols") or []))
+    if payload.get("reconciliation"):
+        reconciliation = payload.get("reconciliation") or {}
+        fields.append(f"reconciled_closed={reconciliation.get('closed')}")
+    return "; ".join(fields[:8])
 
 
 readiness = get("/readiness") or {}
@@ -194,6 +235,43 @@ if by_type:
         use_container_width=True,
         hide_index=True,
     )
+
+st.subheader("Latest Background Jobs")
+latest_jobs = readiness.get("latest_jobs") or {}
+job_rows = []
+for key, label in JOB_LABELS.items():
+    item = latest_jobs.get(key) or {}
+    payload = item.get("payload") or {}
+    job_rows.append({
+        "Job": label,
+        "Seen": item.get("created_at"),
+        "Severity": item.get("severity"),
+        "Message": item.get("message") or "No audit event found",
+        "Summary": payload_summary(payload),
+    })
+
+if job_rows:
+    st.dataframe(pd.DataFrame(job_rows), use_container_width=True, hide_index=True)
+else:
+    st.info("No background job audit events found.")
+
+paper_scheduler_payload = (latest_jobs.get("paper_scheduler") or {}).get("payload") or {}
+scheduler_items = paper_scheduler_payload.get("items") or []
+if scheduler_items:
+    scheduler_rows = []
+    for item in scheduler_items:
+        scheduler_rows.append({
+            "Symbol": item.get("symbol"),
+            "Timeframe": item.get("timeframe"),
+            "Candles": item.get("candles"),
+            "Ready": item.get("ready"),
+            "Created": item.get("created"),
+            "Blocked": item.get("blocked"),
+            "Skipped": item.get("skipped"),
+            "Reason": item.get("reason"),
+        })
+    st.subheader("Latest Scheduler Symbols")
+    st.dataframe(pd.DataFrame(scheduler_rows), use_container_width=True, hide_index=True)
 
 st.subheader("Readiness Gates")
 gate_rows = []
