@@ -32,6 +32,15 @@ These can be completed immediately after inputs are available:
 | Blog/RSS ingestion | `BLOG_FEEDS` | Manual and scheduled RSS ingestion are built | Configure feeds, run configured ingest, process sources |
 | Shared-access security | Target users and access policy | Basic Auth is OK for personal use | Add stronger auth before wider sharing |
 
+Use the integration helper from the laptop when the values are available:
+
+```powershell
+Set-Location C:\Users\LENOVO\Downloads\veda-trading-ai-v0.2
+powershell -ExecutionPolicy Bypass -File scripts\configure_integrations.ps1
+```
+
+The helper connects to the VM, prompts for the values, writes them only to deployment env files, restarts the relevant services, and prints readiness.
+
 ## Final Live-Review Blocker
 
 Only forward paper evidence should block live-review:

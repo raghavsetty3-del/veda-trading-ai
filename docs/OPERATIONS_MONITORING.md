@@ -31,6 +31,13 @@ sudo systemctl daemon-reload
 sudo systemctl restart veda-healthwatch.timer
 ```
 
+From the laptop, the integration helper can also prompt for `HEALTHWATCH_WEBHOOK_URL` and create `.healthwatch.env`:
+
+```powershell
+Set-Location C:\Users\LENOVO\Downloads\veda-trading-ai-v0.2
+powershell -ExecutionPolicy Bypass -File scripts\configure_integrations.ps1
+```
+
 If `/home/traderadmin/ai-trading-system` exists, healthwatch also verifies the crypto bot container and its local status endpoint:
 
 ```text

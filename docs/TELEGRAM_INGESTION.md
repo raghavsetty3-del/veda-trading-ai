@@ -46,6 +46,15 @@ Optional:
 
 Without a bot token, the VM must already have an authorized Telethon user session file under `TELEGRAM_SESSION_DIR`.
 
+From the laptop, use the integration helper after the Telegram rate limit clears:
+
+```powershell
+Set-Location C:\Users\LENOVO\Downloads\veda-trading-ai-v0.2
+powershell -ExecutionPolicy Bypass -File scripts\configure_integrations.ps1
+```
+
+It writes Telegram values to the VM `.env` file only; it does not commit secrets.
+
 Check readiness:
 
 ```bash

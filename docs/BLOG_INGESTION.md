@@ -21,6 +21,13 @@ BLOG_INGEST_LIMIT=20
 BLOG_INGEST_ON_START=false
 ```
 
+From the laptop, the integration helper can set `BLOG_FEEDS` on the VM and restart the scheduler:
+
+```powershell
+Set-Location C:\Users\LENOVO\Downloads\veda-trading-ai-v0.2
+powershell -ExecutionPolicy Bypass -File scripts\configure_integrations.ps1
+```
+
 The scheduler checks configured feeds every `BLOG_INGEST_INTERVAL_SECONDS`.
 
 Each ingested item is archived as a `SourceDocument`, receives a lightweight psychology extraction, and is logged in the audit trail. Duplicate source URLs are skipped.
