@@ -15,6 +15,7 @@ from app.services.knowledge_extraction import extraction_status, process_pending
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
 from app.services.market_provider import ingest_configured_market_sources, ingest_market_source, market_provider_status
 from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
+from app.services.paper_evidence_state import build_paper_evidence_snapshot, record_paper_evidence_snapshot
 from app.services.paper_replay import evaluate_historical_paper_replay
 from app.services.paper_trading import create_paper_trade, list_paper_trades, paper_performance_metrics, reconcile_open_paper_trades, update_paper_trade_status
 from app.services.paper_replay_validation import create_paper_replay_validation
@@ -278,10 +279,17 @@ def paper_performance(symbols: str | None = None, limit: int = 500, db: Session 
     return paper_performance_metrics(db, symbols=parsed_symbols, limit=limit)
 
 
+@app.get("/paper/evidence-state")
+def paper_evidence_state(symbols: str | None = None, db: Session = Depends(get_db)):
+    parsed_symbols = [item.strip().upper() for item in symbols.split(",") if item.strip()] if symbols else None
+    return build_paper_evidence_snapshot(db, symbols=parsed_symbols)
+
+
 @app.post("/paper/trades")
 def create_trade(payload: PaperTradeRequest, db: Session = Depends(get_db)):
     result = create_paper_trade(db, payload)
     audit(db, "paper.trade_create", "Evaluated paper trade request", payload={"created": result["created"], "blocked": result["blocked"], "symbol": result["market_context"]["symbol"], "stance": result["setup"]["stance"], "side": result["side"]})
+    record_paper_evidence_snapshot(db, trigger="trade_create", symbols=[result["market_context"]["symbol"]])
     return result
 
 
@@ -291,6 +299,7 @@ def update_trade(trade_id: int, payload: PaperTradeStatusUpdate, db: Session = D
     if not row:
         raise HTTPException(status_code=404, detail="Paper trade not found")
     audit(db, "paper.trade_update", f"Paper trade {trade_id} -> {row.status}", entity_type="paper_trade", entity_id=str(row.id), payload={"exit_price": row.exit_price, "realized_pnl": row.realized_pnl, "r_multiple": row.r_multiple})
+    record_paper_evidence_snapshot(db, trigger="trade_update", symbols=[row.symbol])
     return row
 
 
@@ -304,6 +313,7 @@ def reconcile_trades(payload: PaperTradeReconcileRequest | None = None, db: Sess
         limit=payload.limit,
     )
     audit(db, "paper.trade_reconcile", "Reconciled open paper trades against stored candles", payload=result)
+    record_paper_evidence_snapshot(db, trigger="trade_reconcile", symbols=payload.symbols)
     return result
 
 

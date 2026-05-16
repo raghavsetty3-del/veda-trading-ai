@@ -6,6 +6,7 @@ from app.config import settings
 from app.models import MarketCandle, PaperTrade
 from app.services.audit import audit
 from app.services.market_data import market_snapshot
+from app.services.paper_evidence_state import record_paper_evidence_snapshot
 from app.services.paper_trading import create_paper_trade, reconcile_open_paper_trades
 
 
@@ -175,4 +176,5 @@ def run_scheduled_paper_trading(
         "items": items,
     }
     audit(db, "paper.scheduler_run", "Scheduled paper trade evaluation completed", payload=result)
+    result["evidence_snapshot"] = record_paper_evidence_snapshot(db, trigger="scheduler", symbols=target_symbols)
     return result

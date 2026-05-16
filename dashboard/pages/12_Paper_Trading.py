@@ -67,6 +67,17 @@ if performance_items:
 else:
     st.info("No paper performance metrics yet.")
 
+evidence_state = get("/paper/evidence-state") or {}
+compact_evidence = evidence_state.get("compact") or {}
+if compact_evidence:
+    st.subheader("Evidence State")
+    st.caption(f"Generated: {evidence_state.get('generated_at')}")
+    st.dataframe(
+        pd.DataFrame([{"Symbol": symbol_key, **values} for symbol_key, values in compact_evidence.items()]),
+        use_container_width=True,
+        hide_index=True,
+    )
+
 st.subheader("Author Context")
 context_limit = st.number_input("Context Candle Limit", min_value=20, max_value=500, value=250, step=10)
 if st.button("Refresh Author Context"):

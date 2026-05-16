@@ -55,6 +55,7 @@ Date: 2026-05-16
 - Historical paper replay can now create validation evidence cases. Timestamped-MTF replay evidence passed for both NIFTY and BANKNIFTY using the author part-book/trail exit plan.
 - Live-readiness now includes a required historical paper replay gate, separate from forward paper evidence collection.
 - Paper performance reports now show remaining realized exits, positive-P&L status, and forward-review readiness per instrument.
+- Paper evidence snapshots are stored in system state and audited when realized exits, P&L, profit factor, or sample readiness changes.
 - Readiness now surfaces latest paper scheduler, market ingest, source extraction, and blog ingestion audit events for operational status checks.
 - Setup evaluation now blocks directional bias when no predefined risk or price-action invalidation level is available.
 - Paper-trading observations and closed-trade P&L can now create validation evidence cases.
