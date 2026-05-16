@@ -158,6 +158,13 @@ class PaperReplayBacktestRequest(BaseModel):
     include_trades: bool = True
 
 
+class PaperReplayValidationRequest(PaperReplayBacktestRequest):
+    expected_min_realized_trades: int = 1
+    expected_min_net_pnl: float = 0.0
+    expected_min_profit_factor: float | None = None
+    notes: str | None = None
+
+
 class RuleSuggestionPromotionRequest(BaseModel):
     review_note: str | None = None
 

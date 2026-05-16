@@ -136,24 +136,25 @@ paper_min_window = st.number_input("Paper Replay Minimum Window", min_value=20, 
 paper_max_trades = st.number_input("Paper Replay Max Trades", min_value=1, max_value=500, value=100, step=10)
 paper_cooldown = st.number_input("Paper Replay Cooldown Candles", min_value=0, max_value=50, value=5, step=1)
 paper_include_trades = st.checkbox("Include Trade Rows", value=False)
+expected_replay_trades = st.number_input("Expected Min Replay Realized Trades", min_value=0, max_value=500, value=1, step=1)
+expected_replay_pnl = st.number_input("Expected Min Replay Net P&L", value=0.0, step=50.0)
+expected_replay_pf = st.number_input("Expected Min Replay Profit Factor", min_value=0.0, value=1.0, step=0.1)
+paper_replay_payload = {
+    "name": "dashboard-historical-paper-replay",
+    "symbol": symbol,
+    "timeframe": timeframe,
+    "limit": int(paper_limit),
+    "min_window": int(paper_min_window),
+    "max_trades": int(paper_max_trades),
+    "cooldown_candles": int(paper_cooldown),
+    "exit_mode": "author_part_book_trail",
+    "part_book_r_multiple": 1.0,
+    "part_book_fraction": 0.5,
+    "trail_lookback_candles": 3,
+    "include_trades": paper_include_trades,
+}
 if st.button("Run Historical Paper Replay"):
-    result = post(
-        "/backtests/paper-replay",
-        {
-            "name": "dashboard-historical-paper-replay",
-            "symbol": symbol,
-            "timeframe": timeframe,
-            "limit": int(paper_limit),
-            "min_window": int(paper_min_window),
-            "max_trades": int(paper_max_trades),
-            "cooldown_candles": int(paper_cooldown),
-            "exit_mode": "author_part_book_trail",
-            "part_book_r_multiple": 1.0,
-            "part_book_fraction": 0.5,
-            "trail_lookback_candles": 3,
-            "include_trades": paper_include_trades,
-        },
-    )
+    result = post("/backtests/paper-replay", paper_replay_payload)
     if result:
         metrics = result.get("metrics", {})
         cols = st.columns(5)
@@ -170,3 +171,18 @@ if st.button("Run Historical Paper Replay"):
         })
         if result.get("trades"):
             st.dataframe(pd.DataFrame(result["trades"]), use_container_width=True)
+
+if st.button("Save Historical Paper Replay as Validation"):
+    result = post(
+        "/validation/from-paper-replay",
+        {
+            **paper_replay_payload,
+            "include_trades": False,
+            "expected_min_realized_trades": int(expected_replay_trades),
+            "expected_min_net_pnl": float(expected_replay_pnl),
+            "expected_min_profit_factor": float(expected_replay_pf),
+            "notes": "Saved from Backtest Replay dashboard with timestamped higher-timeframe context.",
+        },
+    )
+    if result:
+        st.json(result)
