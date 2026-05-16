@@ -23,6 +23,7 @@ Completed as of 2026-05-15:
 - Historical paper replay showed better 90-day metrics with a 5-candle cooldown, now applied to scheduled paper evaluation.
 - Paper risk handling now follows the author's price-action invalidation guidance for stops and part-book/trail guidance for exits.
 - Previous provider-backed open paper trades were cancelled because their retracement was too shallow under the tuned LRHR band.
+- Non-paper workstreams are tracked separately from the forward paper evidence gate so ingestion, monitoring, documentation, and input-bound setup can continue in parallel.
 - Healthwatch, daily offsite backups, and weekly restore drills are active.
 - Live trading remains disabled.
 
@@ -35,9 +36,9 @@ Completed as of 2026-05-15:
 | Historical NIFTY/BANKNIFTY candles | 2026-05-15 | Done | Shared | Dhan provider-backed candles loaded |
 | Historical paper replay evidence | 2026-05-16 | Done | Codex | Timestamp-correct replay validations saved |
 | Paper-trade evidence run | 2026-05-15 to 2026-05-24 | 5 trading sessions minimum | System | Provider candles active; collecting signals and exits |
-| Rule tuning from evidence | 2026-05-25 to 2026-05-29 | 3-5 days | Codex + User review | Depends on paper evidence |
+| Rule tuning from evidence | 2026-05-25 to 2026-05-29 | 3-5 days | Codex + User review | Replay tuning done; forward tuning waits for paper exits |
 | External alerts | 2026-05-15 | 30-60 minutes after webhook URL | Shared | Hook is built, URL needed |
-| Telegram/blog production ingestion | 2026-05-16 to 2026-05-17 | 0.5-1 day after credentials | Shared | Waiting for Telegram/RSS details |
+| Telegram/blog production ingestion | 2026-05-16 to 2026-05-17 | 0.5-1 day after credentials | Shared | Code ready; waiting for Telegram/RSS details |
 | OpenAI extraction enrichment | 2026-05-16 | Done | Shared | Configured and active for optional enrichment |
 | Live-readiness review | 2026-06-01 or later | 1 review session after evidence gates pass | User | Not ready yet |
 
@@ -56,7 +57,7 @@ Do not enable live execution until all gates are reviewed:
 - Kill switch remains tested and available.
 - User explicitly approves the move from paper to live.
 
-The dashboard `Timeline` page and API endpoint `/readiness` separate required live-readiness gates from optional advisories such as Telegram, RSS/blog ingestion, OpenAI enrichment, and external alert receiver configuration.
+The dashboard `Timeline` page and API endpoint `/readiness` separate required live-readiness gates, optional advisories, and parallel workstreams such as Telegram, RSS/blog ingestion, OpenAI enrichment, and external alert receiver configuration.
 
 ## Best Next Actions
 

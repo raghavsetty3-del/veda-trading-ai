@@ -32,6 +32,26 @@ cols[2].metric("Validation Cases", len(validations))
 restore_ok = any(item.get("event_type") == "ops.restore_drill" and item.get("severity") == "INFO" for item in recent_audit)
 cols[3].metric("Live Review", "ready" if readiness.get("ready_for_live_review") else "not ready")
 
+parallel_workstreams = readiness.get("parallel_workstreams") or []
+if parallel_workstreams:
+    st.subheader("Parallel Completion")
+    st.dataframe(
+        pd.DataFrame([
+            {
+                "Workstream": item.get("workstream"),
+                "Status": item.get("status"),
+                "Owner": item.get("owner"),
+                "Blocked By": item.get("blocked_by"),
+                "Can Finish Before Paper Gate": item.get("can_complete_before_paper_gate"),
+                "Inputs Needed": ", ".join(item.get("inputs_needed") or []),
+                "Next Action": item.get("next_action"),
+            }
+            for item in parallel_workstreams
+        ]),
+        use_container_width=True,
+        hide_index=True,
+    )
+
 timeline = [
     {
         "Phase": "GitHub sync",
@@ -73,7 +93,7 @@ timeline = [
         "Target": "2026-05-25 to 2026-05-29",
         "Estimate": "3-5 days",
         "Owner": "Codex + user review",
-        "Status": "Depends on paper evidence",
+        "Status": "Replay tuning done; forward tuning waits for paper exits",
     },
     {
         "Phase": "External alerts",
@@ -87,7 +107,7 @@ timeline = [
         "Target": "2026-05-16 to 2026-05-17",
         "Estimate": "0.5-1 day after credentials",
         "Owner": "Shared",
-        "Status": "Waiting for Telegram/RSS details",
+        "Status": "Code ready; waiting for Telegram/RSS details",
     },
     {
         "Phase": "OpenAI extraction enrichment",

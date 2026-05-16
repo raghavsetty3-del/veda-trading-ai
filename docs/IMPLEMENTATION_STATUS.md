@@ -74,6 +74,7 @@ Date: 2026-05-16
 - Draft rule activation/deactivation workflow with validation notes is present.
 - Draft rule activation now checks automated scenario evidence and blocks incomplete activations.
 - Timeline and live-readiness gates are documented and visible in the dashboard.
+- Parallel workstreams are now visible in readiness and the Timeline dashboard so non-paper work can continue while forward paper evidence accumulates.
 - Historical candle readiness now distinguishes provider-backed candles from smoke/manual/demo data.
 
 ## Pending
@@ -84,6 +85,8 @@ Date: 2026-05-16
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Monitor weekly restore drill logs and audit events.
 - Configure an external webhook receiver for healthwatch alerts if desired.
+
+See `docs/PARALLEL_COMPLETION.md` for the work that can continue while paper evidence accumulates.
 
 ## Current Access
 

@@ -248,6 +248,125 @@ def _historical_replay_gate_detail(evidence: dict) -> str:
     return f"Passing historical paper replay validations: {passing}"
 
 
+def _parallel_workstreams(
+    *,
+    market_status: dict,
+    provider_candle_counts: dict,
+    telegram: dict,
+    extraction: dict,
+    historical_paper_replay: dict,
+    paper: list[dict],
+    restore_drill: dict | None,
+    offsite_backup: dict | None,
+) -> list[dict]:
+    forward_ready = all(item["forward_review_ready"] for item in paper)
+    remaining_by_symbol = {
+        item["symbol"]: item["remaining_review_trades"]
+        for item in paper
+    }
+    pnl_by_symbol = {
+        item["symbol"]: item["net_realized_pnl"]
+        for item in paper
+    }
+    provider_counts_ready = all(count >= 100 for count in provider_candle_counts.values())
+    external_alert_ready = bool(os.getenv("HEALTHWATCH_WEBHOOK_URL"))
+    blog_ready = bool(settings.blog_feeds)
+    backup_ready = restore_drill is not None and offsite_backup is not None
+
+    return [
+        {
+            "workstream": "Market data provider",
+            "status": "done" if market_status["configured"] and provider_counts_ready else "needs_attention",
+            "owner": "system",
+            "blocked_by": None,
+            "inputs_needed": [],
+            "can_complete_before_paper_gate": True,
+            "next_action": "Keep scheduled Dhan ingestion running for NIFTY and BANKNIFTY.",
+            "detail": f"{market_status['operational_source_count']} operational sources; provider candles {provider_candle_counts}.",
+        },
+        {
+            "workstream": "Author rules and historical replay",
+            "status": "done" if historical_paper_replay["all_symbols_passed"] else "needs_attention",
+            "owner": "system",
+            "blocked_by": None,
+            "inputs_needed": [],
+            "can_complete_before_paper_gate": True,
+            "next_action": "Keep replay validation passing after rule changes.",
+            "detail": "Timestamp-correct NIFTY and BANKNIFTY historical paper replay evidence is saved.",
+        },
+        {
+            "workstream": "Forward paper evidence",
+            "status": "done" if forward_ready else "blocked_by_market_evidence",
+            "owner": "system",
+            "blocked_by": "Trading-session outcomes",
+            "inputs_needed": [],
+            "can_complete_before_paper_gate": False,
+            "next_action": "Let the strict LRHR scheduler collect and reconcile realized exits.",
+            "detail": f"Remaining realized exits {remaining_by_symbol}; realized P&L {pnl_by_symbol}.",
+        },
+        {
+            "workstream": "Knowledge extraction",
+            "status": "done" if extraction["openai_enabled"] and extraction["openai_key_present"] else "input_needed",
+            "owner": "system",
+            "blocked_by": None if extraction["openai_enabled"] and extraction["openai_key_present"] else "OpenAI API key",
+            "inputs_needed": [] if extraction["openai_key_present"] else ["OPENAI_API_KEY"],
+            "can_complete_before_paper_gate": True,
+            "next_action": "Archive new sources as they arrive; pending extraction is scheduled.",
+            "detail": f"Deterministic extraction enabled; OpenAI enrichment enabled={extraction['openai_enabled']}.",
+        },
+        {
+            "workstream": "Telegram live ingestion",
+            "status": "done" if telegram["configured"] else "input_needed",
+            "owner": "user",
+            "blocked_by": None if telegram["configured"] else "Telegram credentials and channel list",
+            "inputs_needed": telegram["missing"],
+            "can_complete_before_paper_gate": True,
+            "next_action": "Configure credentials after my.telegram.org rate limit clears, then run live ingestion.",
+            "detail": "Export ingestion already works; live listener waits for credentials.",
+        },
+        {
+            "workstream": "Blog/RSS ingestion",
+            "status": "done" if blog_ready else "input_needed",
+            "owner": "user",
+            "blocked_by": None if blog_ready else "Production RSS feed URLs",
+            "inputs_needed": [] if blog_ready else ["BLOG_FEEDS"],
+            "can_complete_before_paper_gate": True,
+            "next_action": "Add comma-separated RSS feeds, then scheduled ingestion will archive and extract them.",
+            "detail": "Manual and scheduled RSS ingestion code is present.",
+        },
+        {
+            "workstream": "External health alerts",
+            "status": "done" if external_alert_ready else "input_needed",
+            "owner": "user",
+            "blocked_by": None if external_alert_ready else "Webhook receiver URL",
+            "inputs_needed": [] if external_alert_ready else ["HEALTHWATCH_WEBHOOK_URL"],
+            "can_complete_before_paper_gate": True,
+            "next_action": "Add webhook URL to .healthwatch.env if external alerts are desired.",
+            "detail": "Healthwatch auto-healing and local audit logging are already active.",
+        },
+        {
+            "workstream": "Backup and restore monitoring",
+            "status": "done" if backup_ready else "needs_attention",
+            "owner": "system",
+            "blocked_by": None,
+            "inputs_needed": [],
+            "can_complete_before_paper_gate": True,
+            "next_action": "Continue daily offsite backups and weekly restore drills.",
+            "detail": "Latest restore drill and offsite backup are visible in readiness.",
+        },
+        {
+            "workstream": "Shared-access security hardening",
+            "status": "optional",
+            "owner": "user",
+            "blocked_by": "Decision to share the app beyond personal use",
+            "inputs_needed": [],
+            "can_complete_before_paper_gate": True,
+            "next_action": "Keep Basic Auth for personal use; add stronger auth before sharing wider.",
+            "detail": "Not required for paper evidence or personal operation.",
+        },
+    ]
+
+
 def build_readiness_report(db: Session) -> dict:
     market_status = market_provider_status()
     telegram = telegram_status()
@@ -372,6 +491,16 @@ def build_readiness_report(db: Session) -> dict:
     ready_for_live_review = not blocking_gates
     missing_required_inputs = sorted(set(missing_required_inputs))
     optional_missing_inputs = sorted(set(optional_missing_inputs))
+    parallel_workstreams = _parallel_workstreams(
+        market_status=market_status,
+        provider_candle_counts=provider_candle_counts,
+        telegram=telegram,
+        extraction=extraction,
+        historical_paper_replay=historical_paper_replay,
+        paper=paper,
+        restore_drill=restore_drill,
+        offsite_backup=offsite_backup,
+    )
     return {
         "ready_for_live_review": ready_for_live_review,
         "live_trading_enabled": settings.enable_live_trading,
@@ -395,4 +524,5 @@ def build_readiness_report(db: Session) -> dict:
         "restore_drill": restore_drill,
         "offsite_backup": offsite_backup,
         "latest_jobs": latest_jobs,
+        "parallel_workstreams": parallel_workstreams,
     }
