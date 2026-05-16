@@ -1,0 +1,474 @@
+{
+  "baseline_config": {
+    "cooldown_candles": 5,
+    "part_book_fraction": 0.5,
+    "part_book_r_multiple": 1.0,
+    "trail_lookback_candles": 3
+  },
+  "baseline_sell": {
+    "equity_curve_tail": [
+      1700.71,
+      1849.96,
+      1736.38,
+      1540.78,
+      1671.2,
+      1565.0,
+      1473.78,
+      1579.75,
+      1674.85,
+      1633.32
+    ],
+    "final_equity_points": 1633.32,
+    "max_drawdown_points": 2024.03,
+    "max_drawdown_trade": 1,
+    "max_losing_streak": 5,
+    "max_winning_streak": 4,
+    "net_points": 1633.32,
+    "profit_factor": 1.331,
+    "profit_factor_label": "1.331",
+    "side": "sell",
+    "trades": 66,
+    "win_rate": 0.5
+  },
+  "generated_at": "2026-05-16T13:21:51.466730",
+  "mode": "quick_first_pass",
+  "purpose": "Replay-only BANKNIFTY sell-side drawdown tuning. No live or paper settings were changed.",
+  "results": [
+    {
+      "config": {
+        "cooldown_candles": 5,
+        "part_book_fraction": 0.6,
+        "part_book_r_multiple": 1.0,
+        "trail_lookback_candles": 2
+      },
+      "drawdown_improvement_points": 404.81,
+      "index": 4,
+      "overall": {
+        "equity_curve_tail": [
+          4697.56,
+          4965.29,
+          4895.75,
+          5053.13,
+          4962.27,
+          4805.79,
+          4915.67,
+          5069.17,
+          5035.95,
+          4962.97
+        ],
+        "final_equity_points": 4962.97,
+        "gross_loss": 6153.24,
+        "gross_profit": 11116.21,
+        "max_drawdown_points": 1619.22,
+        "max_drawdown_trade": 2,
+        "max_losing_streak": 6,
+        "max_winning_streak": 6,
+        "net_points": 4962.97,
+        "open_at_end": 0,
+        "profit_factor": 1.807,
+        "profit_factor_label": "1.807",
+        "realized_trades": 100,
+        "trades": 100,
+        "win_rate": 0.47
+      },
+      "score": 2529.096,
+      "sell": {
+        "equity_curve_tail": [
+          2084.11,
+          2351.84,
+          2282.3,
+          2439.68,
+          2348.82,
+          2192.34,
+          2302.22,
+          2455.72,
+          2422.5,
+          2349.52
+        ],
+        "final_equity_points": 2349.52,
+        "max_drawdown_points": 1619.22,
+        "max_drawdown_trade": 1,
+        "max_losing_streak": 5,
+        "max_winning_streak": 4,
+        "net_points": 2349.52,
+        "profit_factor": 1.602,
+        "profit_factor_label": "1.602",
+        "side": "sell",
+        "trades": 66,
+        "win_rate": 0.5
+      }
+    },
+    {
+      "config": {
+        "cooldown_candles": 5,
+        "part_book_fraction": 0.6,
+        "part_book_r_multiple": 0.75,
+        "trail_lookback_candles": 3
+      },
+      "drawdown_improvement_points": 404.81,
+      "index": 3,
+      "overall": {
+        "equity_curve_tail": [
+          2968.91,
+          3127.64,
+          3212.41,
+          3655.55,
+          3584.53,
+          4475.55,
+          4561.09,
+          4448.79,
+          4875.53,
+          4837.43
+        ],
+        "final_equity_points": 4837.43,
+        "gross_loss": 4591.86,
+        "gross_profit": 9429.29,
+        "max_drawdown_points": 1619.22,
+        "max_drawdown_trade": 2,
+        "max_losing_streak": 6,
+        "max_winning_streak": 6,
+        "net_points": 4837.43,
+        "open_at_end": 0,
+        "profit_factor": 2.053,
+        "profit_factor_label": "2.053",
+        "realized_trades": 100,
+        "trades": 100,
+        "win_rate": 0.53
+      },
+      "score": 2460.847,
+      "sell": {
+        "equity_curve_tail": [
+          301.4,
+          395.29,
+          364.65,
+          523.38,
+          608.15,
+          1051.29,
+          980.27,
+          1871.29,
+          1956.83,
+          1844.53
+        ],
+        "final_equity_points": 1844.53,
+        "max_drawdown_points": 1619.22,
+        "max_drawdown_trade": 1,
+        "max_losing_streak": 4,
+        "max_winning_streak": 4,
+        "net_points": 1844.53,
+        "profit_factor": 1.559,
+        "profit_factor_label": "1.559",
+        "side": "sell",
+        "trades": 56,
+        "win_rate": 0.5714
+      }
+    },
+    {
+      "config": {
+        "cooldown_candles": 5,
+        "part_book_fraction": 0.5,
+        "part_book_r_multiple": 1.0,
+        "trail_lookback_candles": 3
+      },
+      "drawdown_improvement_points": 0.0,
+      "index": 1,
+      "overall": {
+        "equity_curve_tail": [
+          3624.69,
+          3773.94,
+          3660.36,
+          3464.76,
+          3595.18,
+          3488.98,
+          3397.76,
+          3503.73,
+          3598.83,
+          3557.3
+        ],
+        "final_equity_points": 3557.3,
+        "gross_loss": 7759.5,
+        "gross_profit": 11316.8,
+        "max_drawdown_points": 2024.03,
+        "max_drawdown_trade": 2,
+        "max_losing_streak": 6,
+        "max_winning_streak": 6,
+        "net_points": 3557.3,
+        "open_at_end": 0,
+        "profit_factor": 1.458,
+        "profit_factor_label": "1.458",
+        "realized_trades": 100,
+        "trades": 100,
+        "win_rate": 0.47
+      },
+      "score": 1412.666,
+      "sell": {
+        "equity_curve_tail": [
+          1700.71,
+          1849.96,
+          1736.38,
+          1540.78,
+          1671.2,
+          1565.0,
+          1473.78,
+          1579.75,
+          1674.85,
+          1633.32
+        ],
+        "final_equity_points": 1633.32,
+        "max_drawdown_points": 2024.03,
+        "max_drawdown_trade": 1,
+        "max_losing_streak": 5,
+        "max_winning_streak": 4,
+        "net_points": 1633.32,
+        "profit_factor": 1.331,
+        "profit_factor_label": "1.331",
+        "side": "sell",
+        "trades": 66,
+        "win_rate": 0.5
+      }
+    },
+    {
+      "config": {
+        "cooldown_candles": 5,
+        "part_book_fraction": 0.5,
+        "part_book_r_multiple": 0.75,
+        "trail_lookback_candles": 3
+      },
+      "drawdown_improvement_points": 0.0,
+      "index": 2,
+      "overall": {
+        "equity_curve_tail": [
+          1825.0,
+          1995.99,
+          2080.98,
+          2561.55,
+          2472.78,
+          3528.95,
+          3606.17,
+          3465.79,
+          3968.47,
+          3920.85
+        ],
+        "final_equity_points": 3920.85,
+        "gross_loss": 5739.82,
+        "gross_profit": 9660.67,
+        "max_drawdown_points": 2024.03,
+        "max_drawdown_trade": 2,
+        "max_losing_streak": 6,
+        "max_winning_streak": 6,
+        "net_points": 3920.85,
+        "open_at_end": 0,
+        "profit_factor": 1.683,
+        "profit_factor_label": "1.683",
+        "realized_trades": 100,
+        "trades": 100,
+        "win_rate": 0.53
+      },
+      "score": 1411.384,
+      "sell": {
+        "equity_curve_tail": [
+          -284.32,
+          -194.81,
+          -233.11,
+          -62.12,
+          22.87,
+          503.44,
+          414.67,
+          1470.84,
+          1548.06,
+          1407.68
+        ],
+        "final_equity_points": 1407.68,
+        "max_drawdown_points": 2024.03,
+        "max_drawdown_trade": 1,
+        "max_losing_streak": 4,
+        "max_winning_streak": 4,
+        "net_points": 1407.68,
+        "profit_factor": 1.341,
+        "profit_factor_label": "1.341",
+        "side": "sell",
+        "trades": 56,
+        "win_rate": 0.5714
+      }
+    }
+  ],
+  "search_space": [
+    {
+      "cooldown_candles": 5,
+      "exit_mode": "author_part_book_trail",
+      "limit": 200000,
+      "max_trades": 100,
+      "min_window": 200,
+      "output_dir": "data/reports",
+      "part_book_fraction": 0.5,
+      "part_book_r_multiple": 1.0,
+      "timeframe": "5m",
+      "trail_lookback_candles": 3
+    },
+    {
+      "cooldown_candles": 5,
+      "exit_mode": "author_part_book_trail",
+      "limit": 200000,
+      "max_trades": 100,
+      "min_window": 200,
+      "output_dir": "data/reports",
+      "part_book_fraction": 0.5,
+      "part_book_r_multiple": 0.75,
+      "timeframe": "5m",
+      "trail_lookback_candles": 3
+    },
+    {
+      "cooldown_candles": 5,
+      "exit_mode": "author_part_book_trail",
+      "limit": 200000,
+      "max_trades": 100,
+      "min_window": 200,
+      "output_dir": "data/reports",
+      "part_book_fraction": 0.6,
+      "part_book_r_multiple": 0.75,
+      "timeframe": "5m",
+      "trail_lookback_candles": 3
+    },
+    {
+      "cooldown_candles": 5,
+      "exit_mode": "author_part_book_trail",
+      "limit": 200000,
+      "max_trades": 100,
+      "min_window": 200,
+      "output_dir": "data/reports",
+      "part_book_fraction": 0.6,
+      "part_book_r_multiple": 1.0,
+      "timeframe": "5m",
+      "trail_lookback_candles": 2
+    }
+  ],
+  "top_candidates": [
+    {
+      "config": {
+        "cooldown_candles": 5,
+        "part_book_fraction": 0.6,
+        "part_book_r_multiple": 1.0,
+        "trail_lookback_candles": 2
+      },
+      "drawdown_improvement_points": 404.81,
+      "index": 4,
+      "overall": {
+        "equity_curve_tail": [
+          4697.56,
+          4965.29,
+          4895.75,
+          5053.13,
+          4962.27,
+          4805.79,
+          4915.67,
+          5069.17,
+          5035.95,
+          4962.97
+        ],
+        "final_equity_points": 4962.97,
+        "gross_loss": 6153.24,
+        "gross_profit": 11116.21,
+        "max_drawdown_points": 1619.22,
+        "max_drawdown_trade": 2,
+        "max_losing_streak": 6,
+        "max_winning_streak": 6,
+        "net_points": 4962.97,
+        "open_at_end": 0,
+        "profit_factor": 1.807,
+        "profit_factor_label": "1.807",
+        "realized_trades": 100,
+        "trades": 100,
+        "win_rate": 0.47
+      },
+      "score": 2529.096,
+      "sell": {
+        "equity_curve_tail": [
+          2084.11,
+          2351.84,
+          2282.3,
+          2439.68,
+          2348.82,
+          2192.34,
+          2302.22,
+          2455.72,
+          2422.5,
+          2349.52
+        ],
+        "final_equity_points": 2349.52,
+        "max_drawdown_points": 1619.22,
+        "max_drawdown_trade": 1,
+        "max_losing_streak": 5,
+        "max_winning_streak": 4,
+        "net_points": 2349.52,
+        "profit_factor": 1.602,
+        "profit_factor_label": "1.602",
+        "side": "sell",
+        "trades": 66,
+        "win_rate": 0.5
+      }
+    },
+    {
+      "config": {
+        "cooldown_candles": 5,
+        "part_book_fraction": 0.6,
+        "part_book_r_multiple": 0.75,
+        "trail_lookback_candles": 3
+      },
+      "drawdown_improvement_points": 404.81,
+      "index": 3,
+      "overall": {
+        "equity_curve_tail": [
+          2968.91,
+          3127.64,
+          3212.41,
+          3655.55,
+          3584.53,
+          4475.55,
+          4561.09,
+          4448.79,
+          4875.53,
+          4837.43
+        ],
+        "final_equity_points": 4837.43,
+        "gross_loss": 4591.86,
+        "gross_profit": 9429.29,
+        "max_drawdown_points": 1619.22,
+        "max_drawdown_trade": 2,
+        "max_losing_streak": 6,
+        "max_winning_streak": 6,
+        "net_points": 4837.43,
+        "open_at_end": 0,
+        "profit_factor": 2.053,
+        "profit_factor_label": "2.053",
+        "realized_trades": 100,
+        "trades": 100,
+        "win_rate": 0.53
+      },
+      "score": 2460.847,
+      "sell": {
+        "equity_curve_tail": [
+          301.4,
+          395.29,
+          364.65,
+          523.38,
+          608.15,
+          1051.29,
+          980.27,
+          1871.29,
+          1956.83,
+          1844.53
+        ],
+        "final_equity_points": 1844.53,
+        "max_drawdown_points": 1619.22,
+        "max_drawdown_trade": 1,
+        "max_losing_streak": 4,
+        "max_winning_streak": 4,
+        "net_points": 1844.53,
+        "profit_factor": 1.559,
+        "profit_factor_label": "1.559",
+        "side": "sell",
+        "trades": 56,
+        "win_rate": 0.5714
+      }
+    }
+  ]
+}

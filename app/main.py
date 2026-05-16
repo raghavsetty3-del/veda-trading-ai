@@ -21,6 +21,7 @@ from app.services.paper_replay import evaluate_historical_paper_replay
 from app.services.paper_trading import create_paper_trade, list_paper_trades, paper_performance_metrics, reconcile_open_paper_trades, update_paper_trade_status
 from app.services.paper_replay_validation import create_paper_replay_validation
 from app.services.paper_validation import create_paper_trade_validation
+from app.services.replay_reports import latest_replay_risk_report
 from app.services.recovery import get_kill_switch, set_kill_switch
 from app.services.readiness import build_readiness_report
 from app.services.rule_evidence import build_rule_activation_evidence
@@ -79,6 +80,11 @@ def health(db: Session = Depends(get_db)):
 @app.get("/readiness")
 def readiness(db: Session = Depends(get_db)):
     return build_readiness_report(db)
+
+
+@app.get("/reports/replay-risk/latest")
+def replay_risk_report_latest():
+    return latest_replay_risk_report()
 
 
 @app.get("/principles")
