@@ -2,7 +2,7 @@
 
 Recommended next build:
 1. Let Dhan-backed EMA200 paper trading continue until each reviewed instrument has at least 20 realized closed outcomes.
-2. Review accumulated paper-trade exit evidence before enabling any live execution.
+2. Review accumulated paper-trade exit evidence using `docs/PAPER_EVIDENCE_REVIEW.md` before enabling any live execution.
 3. Keep all other workstreams moving in parallel; see `docs/PARALLEL_COMPLETION.md`.
 4. Keep historical paper replay validation passing with timestamp-correct higher-timeframe context for every reviewed instrument.
 5. Configure a real external webhook receiver for healthwatch alerts after the webhook URL is available.

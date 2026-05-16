@@ -77,6 +77,7 @@ Date: 2026-05-16
 - Timeline and live-readiness gates are documented and visible in the dashboard.
 - Parallel workstreams are now visible in readiness and the Timeline dashboard so non-paper work can continue while forward paper evidence accumulates.
 - Integration setup helpers are present for Telegram, RSS feeds, and healthwatch webhook configuration without committing secrets.
+- Paper evidence review runbook is present for the eventual live-readiness review.
 - Historical candle readiness now distinguishes provider-backed candles from smoke/manual/demo data.
 
 ## Pending
