@@ -223,6 +223,30 @@ if paper:
         hide_index=True,
     )
 
+evidence_history = get("/paper/evidence-history", {"limit": 10}) or {}
+evidence_history_rows = []
+for event in evidence_history.get("items") or []:
+    current_by_symbol = event.get("current") or {}
+    deltas_by_symbol = event.get("deltas") or {}
+    for history_symbol in sorted(set(current_by_symbol) | set(deltas_by_symbol)):
+        current_values = current_by_symbol.get(history_symbol) or {}
+        changed_fields = sorted((deltas_by_symbol.get(history_symbol) or {}).keys())
+        evidence_history_rows.append({
+            "Created": event.get("created_at"),
+            "Trigger": event.get("trigger"),
+            "Symbol": history_symbol,
+            "Changed": ", ".join(changed_fields) or "snapshot",
+            "Realized": current_values.get("realized_closed_trades"),
+            "Remaining": current_values.get("remaining_review_trades"),
+            "Net P&L": current_values.get("net_realized_pnl"),
+            "Profit Factor": current_values.get("profit_factor_label"),
+            "Forward Ready": current_values.get("forward_review_ready"),
+        })
+
+if evidence_history_rows:
+    st.subheader("Paper Evidence History")
+    st.dataframe(pd.DataFrame(evidence_history_rows), use_container_width=True, hide_index=True)
+
 latest_jobs = readiness.get("latest_jobs") or {}
 if latest_jobs:
     st.subheader("Latest Background Jobs")

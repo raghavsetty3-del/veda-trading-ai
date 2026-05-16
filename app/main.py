@@ -15,7 +15,7 @@ from app.services.knowledge_extraction import extraction_status, process_pending
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
 from app.services.market_provider import ingest_configured_market_sources, ingest_market_source, market_provider_status
 from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
-from app.services.paper_evidence_state import build_paper_evidence_snapshot, record_paper_evidence_snapshot
+from app.services.paper_evidence_state import build_paper_evidence_snapshot, list_paper_evidence_history, record_paper_evidence_snapshot
 from app.services.paper_replay import evaluate_historical_paper_replay
 from app.services.paper_trading import create_paper_trade, list_paper_trades, paper_performance_metrics, reconcile_open_paper_trades, update_paper_trade_status
 from app.services.paper_replay_validation import create_paper_replay_validation
@@ -283,6 +283,12 @@ def paper_performance(symbols: str | None = None, limit: int = 500, db: Session 
 def paper_evidence_state(symbols: str | None = None, db: Session = Depends(get_db)):
     parsed_symbols = [item.strip().upper() for item in symbols.split(",") if item.strip()] if symbols else None
     return build_paper_evidence_snapshot(db, symbols=parsed_symbols)
+
+
+@app.get("/paper/evidence-history")
+def paper_evidence_history(symbols: str | None = None, limit: int = 25, db: Session = Depends(get_db)):
+    parsed_symbols = [item.strip().upper() for item in symbols.split(",") if item.strip()] if symbols else None
+    return list_paper_evidence_history(db, symbols=parsed_symbols, limit=limit)
 
 
 @app.post("/paper/trades")

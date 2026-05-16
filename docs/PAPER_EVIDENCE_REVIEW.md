@@ -12,6 +12,10 @@ This review is required before any live-trading setting changes. It applies sepa
 - Profit factor reviewed with enough losing trades to be meaningful.
 - No open paper trade with unmanaged risk.
 
+Review the current snapshot in `/paper/evidence-state` and the change log in
+`/paper/evidence-history`. The dashboard surfaces both on the Paper Trading page,
+and the Timeline page shows the latest compact history.
+
 ## Author Alignment Checks
 
 Every reviewed winning and losing sample should answer:

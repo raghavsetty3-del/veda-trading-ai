@@ -78,6 +78,33 @@ if compact_evidence:
         hide_index=True,
     )
 
+evidence_history = get("/paper/evidence-history", {"limit": 25}) or {}
+history_rows = []
+for event in evidence_history.get("items") or []:
+    current_by_symbol = event.get("current") or {}
+    deltas_by_symbol = event.get("deltas") or {}
+    for history_symbol in sorted(set(current_by_symbol) | set(deltas_by_symbol)):
+        current_values = current_by_symbol.get(history_symbol) or {}
+        changed_fields = sorted((deltas_by_symbol.get(history_symbol) or {}).keys())
+        history_rows.append({
+            "Created": event.get("created_at"),
+            "Trigger": event.get("trigger"),
+            "Symbol": history_symbol,
+            "Changed": ", ".join(changed_fields) or "snapshot",
+            "Realized": current_values.get("realized_closed_trades"),
+            "Remaining": current_values.get("remaining_review_trades"),
+            "Sample Ready": current_values.get("sample_ready"),
+            "Net P&L": current_values.get("net_realized_pnl"),
+            "P&L Positive": current_values.get("pnl_positive"),
+            "Profit Factor": current_values.get("profit_factor_label"),
+            "Avg R": current_values.get("average_r_multiple"),
+            "Forward Ready": current_values.get("forward_review_ready"),
+        })
+
+if history_rows:
+    st.subheader("Evidence History")
+    st.dataframe(pd.DataFrame(history_rows), use_container_width=True, hide_index=True)
+
 st.subheader("Author Context")
 context_limit = st.number_input("Context Candle Limit", min_value=20, max_value=500, value=250, step=10)
 if st.button("Refresh Author Context"):
