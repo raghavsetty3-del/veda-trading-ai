@@ -11,6 +11,7 @@ from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
 from app.services.blog_ingestion import backfill_feed_pages, backfill_wordpress_site, ingest_blog_feed, ingest_configured_blog_feeds
 from app.services.dhan_market_data import dhan_status
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
+from app.services.insight_review import chart_insight_samples
 from app.services.knowledge_extraction import extraction_status, process_pending_sources, process_source
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
 from app.services.market_provider import ingest_configured_market_sources, ingest_market_source, market_provider_status
@@ -582,6 +583,23 @@ def ingest_x_export_request(payload: XExportIngestRequest, db: Session = Depends
 @app.get("/insights")
 def list_insights(limit: int = 100, db: Session = Depends(get_db)):
     return db.query(ExtractedInsight).order_by(ExtractedInsight.created_at.desc()).limit(limit).all()
+
+
+@app.get("/insights/chart-samples")
+def list_chart_insight_samples(
+    limit: int = 25,
+    chart_only: bool = True,
+    actionable_only: bool = False,
+    visual_only: bool = False,
+    db: Session = Depends(get_db),
+):
+    return chart_insight_samples(
+        db,
+        limit=limit,
+        chart_only=chart_only,
+        actionable_only=actionable_only,
+        visual_only=visual_only,
+    )
 
 
 @app.get("/extraction/status")

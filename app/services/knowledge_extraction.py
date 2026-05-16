@@ -1,7 +1,9 @@
 import base64
 from io import BytesIO
 import json
+from pathlib import Path
 import re
+import time
 
 import httpx
 from sqlalchemy.orm import Session
@@ -16,6 +18,10 @@ try:
 except Exception:  # pragma: no cover - optional runtime dependency during local tooling
     Image = None
     UnidentifiedImageError = Exception
+
+
+class OpenAIRateLimited(RuntimeError):
+    pass
 
 
 CONCEPT_KEYWORDS = {
@@ -219,6 +225,8 @@ OPENAI_EXTRACTION_SCHEMA = {
 
 
 def extraction_status() -> dict:
+    backoff_until = _openai_backoff_until()
+    now = time.time()
     return {
         "deterministic_enabled": True,
         "openai_enabled": settings.openai_extraction_enabled,
@@ -226,6 +234,8 @@ def extraction_status() -> dict:
         "openai_model": settings.openai_extraction_model,
         "openai_image_enabled": settings.openai_image_extraction_enabled,
         "openai_image_max_images": settings.openai_image_extraction_max_images,
+        "openai_backoff_active": bool(backoff_until and backoff_until > now),
+        "openai_backoff_until": backoff_until,
     }
 
 
@@ -237,6 +247,8 @@ def _chart_analysis_default(media_urls: list[str] | None = None, caveats: list[s
     return {
         "has_chart_context": bool(urls),
         "image_count": len(urls),
+        "image_analysis_attempted": False,
+        "image_inputs_prepared": 0,
         "visible_timeframes": [],
         "visible_indicators": [],
         "price_levels": [],
@@ -342,6 +354,29 @@ def _openai_image_inputs(media_urls: list[str] | None) -> tuple[list[dict], list
     return inputs, skipped
 
 
+def _openai_backoff_until() -> float | None:
+    try:
+        raw = Path(settings.openai_backoff_path).read_text(encoding="utf-8").strip()
+        return float(raw) if raw else None
+    except (OSError, ValueError):
+        return None
+
+
+def _openai_backoff_active() -> bool:
+    until = _openai_backoff_until()
+    return bool(until and until > time.time())
+
+
+def _activate_openai_backoff() -> None:
+    until = time.time() + max(60, int(settings.openai_rate_limit_backoff_seconds or 900))
+    path = Path(settings.openai_backoff_path)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(str(until), encoding="utf-8")
+    except OSError:
+        return
+
+
 def _openai_payload(text: str | None, media_urls: list[str] | None) -> tuple[dict, list[str], int]:
     image_inputs, skipped_images = _openai_image_inputs(media_urls)
     chart_note = (
@@ -391,6 +426,9 @@ def _post_openai_payload(payload: dict) -> dict | None:
             },
             json=payload,
         )
+        if response.status_code == 429:
+            _activate_openai_backoff()
+            raise OpenAIRateLimited("OpenAI rate limited; visual/text enrichment deferred.")
         response.raise_for_status()
     output_text = _response_output_text(response.json())
     if not output_text:
@@ -401,6 +439,8 @@ def _post_openai_payload(payload: dict) -> dict | None:
 def extract_openai_knowledge(text: str | None, media_urls: list[str] | None = None) -> dict | None:
     if not settings.openai_extraction_enabled or not settings.openai_api_key or not (text or media_urls):
         return None
+    if _openai_backoff_active():
+        return None
 
     payload, skipped_images, image_count = _openai_payload(text, media_urls)
     result = _post_openai_payload(payload)
@@ -410,6 +450,8 @@ def extract_openai_knowledge(text: str | None, media_urls: list[str] | None = No
     chart = conditions.setdefault("chart_analysis", _chart_analysis_default(media_urls))
     chart["image_count"] = image_count
     chart["has_chart_context"] = bool(media_urls)
+    chart["image_analysis_attempted"] = True
+    chart["image_inputs_prepared"] = image_count
     if skipped_images:
         caveats = chart.setdefault("caveats", [])
         caveats.append(f"Skipped unsupported/unreadable chart images: {len(skipped_images)}")
@@ -442,6 +484,14 @@ def _merge_extractions(base: dict, ai: dict | None) -> dict:
         else:
             chart["image_count"] = int(base_chart.get("image_count") or 0)
         chart["has_chart_context"] = bool(base_chart.get("has_chart_context") or ai_chart.get("has_chart_context"))
+        chart["image_analysis_attempted"] = bool(
+            base_chart.get("image_analysis_attempted") or ai_chart.get("image_analysis_attempted")
+        )
+        chart["image_inputs_prepared"] = int(
+            ai_chart.get("image_inputs_prepared")
+            or base_chart.get("image_inputs_prepared")
+            or 0
+        )
         chart["caveats"] = unique_urls([*(base_chart.get("caveats") or []), *(ai_chart.get("caveats") or [])])
         merged["expected_conditions"]["chart_analysis"] = chart
     base_mechanism = ((base.get("expected_conditions") or {}).get("author_mechanism") or {})
@@ -485,7 +535,20 @@ def extract_knowledge(text: str | None, media_urls: list[str] | None = None) -> 
     base = extract_deterministic_knowledge(text, media_urls)
     try:
         return _normalize_extracted_knowledge(_merge_extractions(base, extract_openai_knowledge(text, media_urls)))
+    except OpenAIRateLimited as exc:
+        chart = base.setdefault("expected_conditions", {}).setdefault("chart_analysis", _chart_analysis_default(media_urls))
+        chart["image_analysis_attempted"] = False
+        chart["image_analysis_deferred"] = True
+        chart.setdefault("caveats", []).append("OpenAI rate limit/backoff active; visual analysis deferred.")
+        base["expected_conditions"] = {
+            **base.get("expected_conditions", {}),
+            "openai_extraction_error": str(exc)[:200],
+        }
+        return _normalize_extracted_knowledge(base)
     except Exception as exc:
+        chart = base.setdefault("expected_conditions", {}).setdefault("chart_analysis", _chart_analysis_default(media_urls))
+        chart["image_analysis_attempted"] = True
+        chart.setdefault("caveats", []).append("OpenAI image/text extraction failed before returning structured chart details.")
         base["expected_conditions"] = {
             **base.get("expected_conditions", {}),
             "openai_extraction_error": str(exc)[:200],
@@ -509,7 +572,11 @@ def process_source(db: Session, source_id: int) -> dict | None:
     )
     existing_conditions = (existing.expected_conditions or {}) if existing else {}
     existing_chart = (existing_conditions.get("chart_analysis") or {}) if existing else {}
-    needs_chart_reprocess = bool(media_urls) and settings.openai_image_extraction_enabled and not existing_chart.get("has_chart_context")
+    needs_chart_reprocess = (
+        bool(media_urls)
+        and settings.openai_image_extraction_enabled
+        and not existing_chart.get("image_analysis_attempted")
+    )
     needs_mechanism_reprocess = existing is not None and not existing_conditions.get("author_mechanism")
     if existing and not (needs_chart_reprocess or needs_mechanism_reprocess):
         source.processed = True

@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     openai_image_extraction_enabled: bool = False
     openai_image_extraction_max_images: int = 3
     openai_image_fetch_max_bytes: int = 6_000_000
+    openai_rate_limit_backoff_seconds: int = 900
+    openai_backoff_path: str = "/app/data/openai_backoff_until.txt"
 
     blog_feeds: str | None = None
     blog_discovery_urls: str | None = None

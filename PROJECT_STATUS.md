@@ -23,6 +23,8 @@ Last updated: 2026-05-16
 - Promotion readiness is exposed per symbol; live promotion remains blocked until forward paper evidence is ready.
 - Promotion drawdown gates use symbol-scaled tuning evidence so NIFTY is not judged by BANKNIFTY-sized point thresholds.
 - System Evidence dashboard shows latest scheduler, ingestion, extraction, X/blog, and paper-exit override audit status.
+- Chart Insight Review dashboard exposes chart-backed extracted insights, author mechanisms, price levels, pattern notes, and source previews.
+- Chart visual extraction now tracks whether image analysis was attempted separately from whether chart URLs were archived.
 
 ## Current Evidence
 
@@ -50,5 +52,6 @@ Last updated: 2026-05-16
 ## Next Actions That Do Not Depend On Market Sessions
 
 - Keep reviewing per-symbol promotion readiness and latest background jobs in the System Evidence dashboard.
-- Add deeper chart-insight quality sampling so extracted chart mechanisms can be reviewed faster.
 - Continue chart extraction and author-mechanism enrichment in the background.
+- Requeue older chart-backed sources in controlled batches when they were archived before visual image-analysis tracking existed.
+- Convert stable chart/mechanism patterns into additional candidate rules only after enough repeated evidence is visible.
