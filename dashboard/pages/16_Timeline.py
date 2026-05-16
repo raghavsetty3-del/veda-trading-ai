@@ -223,6 +223,24 @@ if paper:
         hide_index=True,
     )
 
+evidence_review = get("/paper/evidence-review") or {}
+evidence_review_rows = []
+for item in evidence_review.get("items") or []:
+    blocking = [
+        gate.get("gate")
+        for gate in item.get("gates") or []
+        if not gate.get("ready")
+    ]
+    evidence_review_rows.append({
+        "Symbol": item.get("symbol"),
+        "Author Review Ready": item.get("author_review_ready"),
+        "Blocking Gates": ", ".join(blocking) or "None",
+    })
+
+if evidence_review_rows:
+    st.subheader("Paper Evidence Review")
+    st.dataframe(pd.DataFrame(evidence_review_rows), use_container_width=True, hide_index=True)
+
 evidence_history = get("/paper/evidence-history", {"limit": 10}) or {}
 evidence_history_rows = []
 for event in evidence_history.get("items") or []:
@@ -263,6 +281,25 @@ if latest_jobs:
         use_container_width=True,
         hide_index=True,
     )
+
+source_archive = readiness.get("source_archive") or {}
+if source_archive:
+    st.subheader("Source Archive")
+    archive_cols = st.columns(4)
+    archive_cols[0].metric("Sources", source_archive.get("total_sources"))
+    archive_cols[1].metric("Processed", source_archive.get("processed_sources"))
+    archive_cols[2].metric("Pending", source_archive.get("pending_sources"))
+    archive_cols[3].metric("Insights", source_archive.get("insights"))
+    by_type = source_archive.get("by_type") or {}
+    if by_type:
+        st.dataframe(
+            pd.DataFrame([
+                {"Type": source_type, "Sources": count}
+                for source_type, count in sorted(by_type.items())
+            ]),
+            use_container_width=True,
+            hide_index=True,
+        )
 
 non_production = readiness.get("non_production_source_counts", {})
 if non_production:

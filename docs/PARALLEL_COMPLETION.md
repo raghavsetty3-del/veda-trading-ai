@@ -29,7 +29,8 @@ These can be completed immediately after inputs are available:
 | --- | --- | --- | --- |
 | External health alerts | `HEALTHWATCH_WEBHOOK_URL` | Healthwatch is built and logging locally | Add `.healthwatch.env`, restart timer, run healthwatch check |
 | Telegram live ingestion | `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_CHANNELS` | Export ingestion and live listener are built | Configure env/session, run live ingestion, process sources |
-| Blog/RSS ingestion | `BLOG_FEEDS` | Manual and scheduled RSS ingestion are built | Configure feeds, run configured ingest, process sources |
+| Blog/RSS ingestion | `BLOG_FEEDS` | Manual and scheduled RSS ingestion are built; JustNifty feeds are now configured | Keep scheduled ingest running and process new sources |
+| X/Twitter ingestion | `X_BEARER_TOKEN`, `X_USERNAMES` | Official X API v2 connector is built | Configure only user-approved accounts, run ingestion, process sources |
 | Shared-access security | Target users and access policy | Basic Auth is OK for personal use | Add stronger auth before wider sharing |
 
 Use the integration helper from the laptop when the values are available:

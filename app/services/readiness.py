@@ -4,11 +4,12 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import AuditLog, MarketCandle, PaperTrade, ValidationCase
+from app.models import AuditLog, ExtractedInsight, MarketCandle, PaperTrade, SourceDocument, ValidationCase
 from app.services.market_provider import market_provider_status
 from app.ingestion.telegram_listener import telegram_status
 from app.services.knowledge_extraction import extraction_status
 from app.services.recovery import get_kill_switch
+from app.services.x_ingestion import x_status
 
 
 def _paper_metrics(db: Session, symbol: str) -> dict:
@@ -98,6 +99,36 @@ def _non_production_source_counts(db: Session) -> dict:
         if any(marker in source.lower() for marker in blocked_source_markers):
             counts[f"{symbol}:{timeframe}:{source}"] = count
     return counts
+
+
+def _source_archive_summary(db: Session) -> dict:
+    total = db.query(SourceDocument).count()
+    processed = db.query(SourceDocument).filter(SourceDocument.processed.is_(True)).count()
+    by_type = {
+        source_type: count
+        for source_type, count in (
+            db.query(SourceDocument.source_type, func.count(SourceDocument.id))
+            .group_by(SourceDocument.source_type)
+            .all()
+        )
+    }
+    blog_authors = {
+        author or "unknown": count
+        for author, count in (
+            db.query(SourceDocument.author, func.count(SourceDocument.id))
+            .filter(SourceDocument.source_type == "blog")
+            .group_by(SourceDocument.author)
+            .all()
+        )
+    }
+    return {
+        "total_sources": total,
+        "processed_sources": processed,
+        "pending_sources": max(0, total - processed),
+        "insights": db.query(ExtractedInsight).count(),
+        "by_type": by_type,
+        "blog_authors": blog_authors,
+    }
 
 
 def _latest_successful_audit(db: Session, event_type: str) -> dict | None:
@@ -253,6 +284,7 @@ def _parallel_workstreams(
     market_status: dict,
     provider_candle_counts: dict,
     telegram: dict,
+    x_sources: dict,
     extraction: dict,
     historical_paper_replay: dict,
     paper: list[dict],
@@ -331,8 +363,18 @@ def _parallel_workstreams(
             "blocked_by": None if blog_ready else "Production RSS feed URLs",
             "inputs_needed": [] if blog_ready else ["BLOG_FEEDS"],
             "can_complete_before_paper_gate": True,
-            "next_action": "Add comma-separated RSS feeds, then scheduled ingestion will archive and extract them.",
-            "detail": "Manual and scheduled RSS ingestion code is present.",
+            "next_action": "Keep Ilango-only scheduled ingestion running and process archived sources in controlled batches.",
+            "detail": "Manual, scheduled, and backfill RSS ingestion are present.",
+        },
+        {
+            "workstream": "X/Twitter ingestion",
+            "status": "done" if x_sources["configured"] else "input_needed",
+            "owner": "user",
+            "blocked_by": None if x_sources["configured"] else "X API bearer token and usernames",
+            "inputs_needed": x_sources["missing"],
+            "can_complete_before_paper_gate": True,
+            "next_action": "Add X_BEARER_TOKEN and X_USERNAMES, then scheduled ingestion will archive and extract recent posts.",
+            "detail": "Official X API v2 ingestion is optional and depends on the account's API read access.",
         },
         {
             "workstream": "External health alerts",
@@ -370,6 +412,7 @@ def _parallel_workstreams(
 def build_readiness_report(db: Session) -> dict:
     market_status = market_provider_status()
     telegram = telegram_status()
+    x_sources = x_status()
     extraction = extraction_status()
     validation = _validation_summary(db)
     symbols = ["NIFTY", "BANKNIFTY"]
@@ -378,6 +421,7 @@ def build_readiness_report(db: Session) -> dict:
     candle_counts = {symbol: _candle_count(db, symbol) for symbol in symbols}
     provider_candle_counts = {symbol: _provider_candle_count(db, symbol) for symbol in symbols}
     non_production_source_counts = _non_production_source_counts(db)
+    source_archive = _source_archive_summary(db)
     restore_drill = _latest_successful_audit(db, "ops.restore_drill")
     offsite_backup = _latest_successful_audit(db, "ops.offsite_backup")
     latest_jobs = {
@@ -385,6 +429,7 @@ def build_readiness_report(db: Session) -> dict:
         "market_provider_ingest": _latest_audit(db, "market.provider_ingest_configured"),
         "source_extraction": _latest_audit(db, "extraction.scheduled_process_pending") or _latest_audit(db, "extraction.process_pending"),
         "blog_ingest": _latest_audit(db, "blog.configured_ingest"),
+        "x_ingest": _latest_audit(db, "x.configured_ingest"),
     }
     kill_switch = get_kill_switch(db)
 
@@ -459,6 +504,12 @@ def build_readiness_report(db: Session) -> dict:
             "detail": f"Missing: {telegram['missing']}",
         },
         {
+            "gate": "x_configured",
+            "required": False,
+            "ready": x_sources["configured"],
+            "detail": f"Missing: {x_sources['missing']}",
+        },
+        {
             "gate": "openai_extraction_ready",
             "required": False,
             "ready": extraction["openai_enabled"] and extraction["openai_key_present"],
@@ -478,6 +529,8 @@ def build_readiness_report(db: Session) -> dict:
         missing_required_inputs.extend(dhan.get("missing", []))
     if not telegram["configured"]:
         optional_missing_inputs.extend(telegram["missing"])
+    if not x_sources["configured"]:
+        optional_missing_inputs.extend(x_sources["missing"])
     if not extraction["openai_key_present"]:
         optional_missing_inputs.append("OPENAI_API_KEY if AI enrichment is desired")
     if not os.getenv("HEALTHWATCH_WEBHOOK_URL"):
@@ -495,6 +548,7 @@ def build_readiness_report(db: Session) -> dict:
         market_status=market_status,
         provider_candle_counts=provider_candle_counts,
         telegram=telegram,
+        x_sources=x_sources,
         extraction=extraction,
         historical_paper_replay=historical_paper_replay,
         paper=paper,
@@ -514,6 +568,7 @@ def build_readiness_report(db: Session) -> dict:
         "missing_inputs": sorted(set(missing_required_inputs + optional_missing_inputs)),
         "market_provider": market_status,
         "telegram": telegram,
+        "x_sources": x_sources,
         "extraction": extraction,
         "validation": validation,
         "historical_paper_replay": historical_paper_replay,
@@ -521,6 +576,7 @@ def build_readiness_report(db: Session) -> dict:
         "candle_counts": candle_counts,
         "provider_candle_counts": provider_candle_counts,
         "non_production_source_counts": non_production_source_counts,
+        "source_archive": source_archive,
         "restore_drill": restore_drill,
         "offsite_backup": offsite_backup,
         "latest_jobs": latest_jobs,

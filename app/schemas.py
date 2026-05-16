@@ -180,6 +180,13 @@ class SourceDocumentCreate(BaseModel):
     media_paths: list[str] | None = None
 
 
+class BlogBackfillRequest(BaseModel):
+    feed_url: str | None = None
+    wordpress_site: str | None = None
+    max_pages: int = 10
+    page_size: int = 25
+
+
 class TelegramExportMessage(BaseModel):
     message_id: str | int
     text: str
@@ -195,6 +202,11 @@ class TelegramExportIngestRequest(BaseModel):
 
 class TelegramLiveIngestRequest(BaseModel):
     channels: list[str] | None = None
+    limit: int | None = None
+
+
+class XIngestRequest(BaseModel):
+    usernames: list[str] | None = None
     limit: int | None = None
 
 

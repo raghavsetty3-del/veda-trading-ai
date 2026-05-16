@@ -57,6 +57,7 @@ Date: 2026-05-16
 - Paper performance reports now show remaining realized exits, positive-P&L status, and forward-review readiness per instrument.
 - Paper evidence snapshots are stored in system state and audited when realized exits, P&L, profit factor, or sample readiness changes.
 - Paper evidence history is available through `/paper/evidence-history` and is visible on the Paper Trading and Timeline dashboard pages.
+- Paper evidence review gates are available through `/paper/evidence-review` and mirror the author-aligned live-review checklist per instrument.
 - Readiness now surfaces latest paper scheduler, market ingest, source extraction, and blog ingestion audit events for operational status checks.
 - Setup evaluation now blocks directional bias when no predefined risk or price-action invalidation level is available.
 - Paper-trading observations and closed-trade P&L can now create validation evidence cases.
@@ -67,7 +68,11 @@ Date: 2026-05-16
 - Dhan-backed stored-candle replay validation is passing for the tuned RULE-RETRACEMENT-LRHR band on both NIFTY and BANKNIFTY over rolling 200-candle windows.
 - Setup scoring was retuned to match the JustNifty extraction: directional bias now requires aligned price action structure, true EMA200 bias, LRHR retracement, and higher-timeframe direction.
 - Scheduled blog RSS ingestion is present and configurable through `BLOG_FEEDS`.
+- JustNifty WordPress and the book-referenced `tradeinniftyonly.blogspot.com` feed are configured as production author RSS/Atom sources.
+- Blog archive backfill is present for paged WordPress and RSS/Atom archives, with source URL deduplication.
+- Readiness and Timeline now show source archive totals, processed sources, pending sources, and insight count.
 - Telegram export ingestion, credential readiness status, and live Telethon ingestion endpoint are present.
+- Optional X/Twitter ingestion is present through official X API v2 user timelines; it waits for user-approved handles and an API bearer token.
 - Local deterministic knowledge extraction workbench is present.
 - Optional OpenAI-assisted extraction is configured and active for source enrichment.
 - Pending source extraction is scheduled so newly ingested source documents can become insights automatically.

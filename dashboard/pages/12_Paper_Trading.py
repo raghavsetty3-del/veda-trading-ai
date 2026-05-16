@@ -67,6 +67,22 @@ if performance_items:
 else:
     st.info("No paper performance metrics yet.")
 
+evidence_review = get("/paper/evidence-review") or {}
+review_rows = []
+for item in evidence_review.get("items") or []:
+    for gate in item.get("gates") or []:
+        review_rows.append({
+            "Symbol": item.get("symbol"),
+            "Author Review Ready": item.get("author_review_ready"),
+            "Gate": gate.get("gate"),
+            "Ready": gate.get("ready"),
+            "Detail": gate.get("detail"),
+        })
+
+if review_rows:
+    st.subheader("Evidence Review Gates")
+    st.dataframe(pd.DataFrame(review_rows), use_container_width=True, hide_index=True)
+
 evidence_state = get("/paper/evidence-state") or {}
 compact_evidence = evidence_state.get("compact") or {}
 if compact_evidence:

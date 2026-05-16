@@ -15,6 +15,8 @@ This review is required before any live-trading setting changes. It applies sepa
 Review the current snapshot in `/paper/evidence-state` and the change log in
 `/paper/evidence-history`. The dashboard surfaces both on the Paper Trading page,
 and the Timeline page shows the latest compact history.
+Use `/paper/evidence-review` for the per-instrument gate summary that mirrors
+this checklist.
 
 ## Author Alignment Checks
 

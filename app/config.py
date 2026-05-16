@@ -57,6 +57,9 @@ class Settings(BaseSettings):
 
     x_bearer_token: str | None = None
     x_usernames: str | None = None
+    x_ingest_interval_seconds: int = 3600
+    x_ingest_limit: int = 20
+    x_ingest_on_start: bool = False
 
     enable_live_trading: bool = False
     enable_paper_trading: bool = True

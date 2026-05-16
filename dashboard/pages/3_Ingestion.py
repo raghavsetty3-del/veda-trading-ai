@@ -21,6 +21,23 @@ if st.button("Run Configured Blog Ingestion"):
     r = requests.post(f"{API_BASE}/ingest/blog/configured", timeout=120)
     st.write(r.json())
 
+st.subheader("Blog Backfill")
+backfill_kind = st.selectbox("Backfill Type", ["WordPress site", "RSS/Atom feed"])
+backfill_target = st.text_input("Backfill Target", value="jusnifty.wordpress.com")
+backfill_pages = st.number_input("Backfill Pages", min_value=1, max_value=200, value=10)
+backfill_page_size = st.number_input("Backfill Page Size", min_value=1, max_value=100, value=25)
+if st.button("Run Blog Backfill"):
+    payload = {
+        "max_pages": int(backfill_pages),
+        "page_size": int(backfill_page_size),
+    }
+    if backfill_kind == "WordPress site":
+        payload["wordpress_site"] = backfill_target
+    else:
+        payload["feed_url"] = backfill_target
+    r = requests.post(f"{API_BASE}/ingest/blog/backfill", json=payload, timeout=300)
+    st.write(r.json())
+
 st.subheader("Telegram")
 telegram_status = requests.get(f"{API_BASE}/ingest/telegram/status", timeout=8).json()
 st.write(telegram_status)
@@ -32,6 +49,19 @@ if st.button("Run Live Telegram Ingestion"):
         "channels": [item.strip() for item in live_channels.split(",") if item.strip()] or None,
     }
     r = requests.post(f"{API_BASE}/ingest/telegram/live", json=payload, timeout=120)
+    st.write(r.json())
+
+st.subheader("X/Twitter")
+x_status = requests.get(f"{API_BASE}/ingest/x/status", timeout=8).json()
+st.write(x_status)
+x_limit = st.number_input("X Ingest Limit", min_value=5, max_value=100, value=int(x_status.get("ingest_limit", 20)))
+x_usernames = st.text_input("X Username Override", value="")
+if st.button("Run X Ingestion"):
+    payload = {
+        "limit": int(x_limit),
+        "usernames": [item.strip().lstrip("@") for item in x_usernames.split(",") if item.strip()] or None,
+    }
+    r = requests.post(f"{API_BASE}/ingest/x/configured", json=payload, timeout=120)
     st.write(r.json())
 
 channel = st.text_input("Telegram channel/export name", value="manual-export")

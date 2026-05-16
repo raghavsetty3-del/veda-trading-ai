@@ -4,18 +4,18 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperReplayBacktestRequest, PaperReplayValidationRequest, PaperSchedulerRunRequest, PaperTradeReconcileRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, TelegramLiveIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate
+from app.schemas import AuditEvent, BacktestRequest, BlogBackfillRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperReplayBacktestRequest, PaperReplayValidationRequest, PaperSchedulerRunRequest, PaperTradeReconcileRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramExportIngestRequest, TelegramLiveIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate, XIngestRequest
 from app.services.audit import audit
 from app.services.angelone_market_data import angelone_status
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
-from app.services.blog_ingestion import ingest_blog_feed, ingest_configured_blog_feeds
+from app.services.blog_ingestion import backfill_feed_pages, backfill_wordpress_site, ingest_blog_feed, ingest_configured_blog_feeds
 from app.services.dhan_market_data import dhan_status
 from app.services.instrument_profiles import PROFILES, apply_instrument_profile, get_instrument_profile
 from app.services.knowledge_extraction import extraction_status, process_pending_sources, process_source
 from app.services.market_data import latest_candles, market_snapshot, upsert_candle, upsert_candles
 from app.services.market_provider import ingest_configured_market_sources, ingest_market_source, market_provider_status
 from app.services.paper_scheduler import paper_scheduler_config, run_scheduled_paper_trading
-from app.services.paper_evidence_state import build_paper_evidence_snapshot, list_paper_evidence_history, record_paper_evidence_snapshot
+from app.services.paper_evidence_state import build_paper_evidence_review, build_paper_evidence_snapshot, list_paper_evidence_history, record_paper_evidence_snapshot
 from app.services.paper_replay import evaluate_historical_paper_replay
 from app.services.paper_trading import create_paper_trade, list_paper_trades, paper_performance_metrics, reconcile_open_paper_trades, update_paper_trade_status
 from app.services.paper_replay_validation import create_paper_replay_validation
@@ -34,6 +34,7 @@ from app.services.telegram_ingestion import ingest_telegram_export
 from app.services.telegram_live_ingestion import ingest_live_telegram
 from app.services.trade_export_validation import create_trade_export_validation
 from app.services.validation_evidence import create_candle_replay_validation
+from app.services.x_ingestion import ingest_configured_x_usernames, x_status
 from app.ingestion.blog import fetch_blog_page
 from app.ingestion.telegram_listener import telegram_status
 
@@ -291,6 +292,12 @@ def paper_evidence_history(symbols: str | None = None, limit: int = 25, db: Sess
     return list_paper_evidence_history(db, symbols=parsed_symbols, limit=limit)
 
 
+@app.get("/paper/evidence-review")
+def paper_evidence_review(symbols: str | None = None, db: Session = Depends(get_db)):
+    parsed_symbols = [item.strip().upper() for item in symbols.split(",") if item.strip()] if symbols else None
+    return build_paper_evidence_review(db, symbols=parsed_symbols)
+
+
 @app.post("/paper/trades")
 def create_trade(payload: PaperTradeRequest, db: Session = Depends(get_db)):
     result = create_paper_trade(db, payload)
@@ -404,6 +411,25 @@ def ingest_configured_blogs(db: Session = Depends(get_db)):
     return ingest_configured_blog_feeds(db)
 
 
+@app.post("/ingest/blog/backfill")
+def ingest_blog_backfill(payload: BlogBackfillRequest, db: Session = Depends(get_db)):
+    if payload.wordpress_site:
+        return backfill_wordpress_site(
+            db,
+            site=payload.wordpress_site,
+            max_pages=payload.max_pages,
+            per_page=payload.page_size,
+        )
+    if payload.feed_url:
+        return backfill_feed_pages(
+            db,
+            feed_url=payload.feed_url,
+            max_pages=payload.max_pages,
+            page_size=payload.page_size,
+        )
+    raise HTTPException(status_code=400, detail="Provide wordpress_site or feed_url")
+
+
 @app.get("/ingest/telegram/status")
 def ingest_telegram_status():
     return telegram_status()
@@ -421,6 +447,17 @@ async def ingest_telegram_live_request(payload: TelegramLiveIngestRequest | None
         return await ingest_live_telegram(db, limit=payload.limit, channels=payload.channels)
     except RuntimeError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/ingest/x/status")
+def ingest_x_status():
+    return x_status()
+
+
+@app.post("/ingest/x/configured")
+def ingest_x_configured(payload: XIngestRequest | None = None, db: Session = Depends(get_db)):
+    payload = payload or XIngestRequest()
+    return ingest_configured_x_usernames(db, usernames=payload.usernames, limit=payload.limit)
 
 
 @app.get("/insights")

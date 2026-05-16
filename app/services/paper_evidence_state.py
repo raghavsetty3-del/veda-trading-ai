@@ -51,6 +51,74 @@ def build_paper_evidence_snapshot(db: Session, symbols: list[str] | None = None)
     }
 
 
+def _review_gate(gate: str, ready: bool, detail: str) -> dict:
+    return {
+        "gate": gate,
+        "ready": ready,
+        "detail": detail,
+    }
+
+
+def _build_symbol_review(item: dict) -> dict:
+    symbol = item.get("symbol")
+    realized = item.get("realized_closed_trades") or 0
+    minimum = item.get("minimum_review_trades") or 20
+    remaining = item.get("remaining_review_trades") or max(0, minimum - realized)
+    net_pnl = item.get("net_realized_pnl") or 0
+    average_r = item.get("average_r_multiple")
+    gross_loss = item.get("gross_loss") or 0
+    profit_factor_label = item.get("profit_factor_label")
+    open_trades = item.get("open_trades") or 0
+    open_risk = item.get("open_risk_points") or 0
+    managed_open_risk = open_trades == 0 or open_risk > 0
+    profit_factor_reviewable = realized >= minimum and gross_loss > 0
+    average_r_positive = average_r is not None and average_r > 0
+
+    gates = [
+        _review_gate(
+            "minimum_realized_sample",
+            realized >= minimum,
+            f"{realized}/{minimum} realized closed trades; {remaining} remaining.",
+        ),
+        _review_gate(
+            "positive_realized_pnl",
+            net_pnl > 0,
+            f"Net realized P&L: {net_pnl}.",
+        ),
+        _review_gate(
+            "positive_average_r",
+            average_r_positive,
+            f"Average R-multiple: {average_r if average_r is not None else 'N/A'}.",
+        ),
+        _review_gate(
+            "profit_factor_reviewable",
+            profit_factor_reviewable,
+            f"Profit factor: {profit_factor_label}; gross loss sample: {gross_loss}.",
+        ),
+        _review_gate(
+            "managed_open_risk",
+            managed_open_risk,
+            f"Open trades: {open_trades}; open risk points: {open_risk}.",
+        ),
+    ]
+    return {
+        "symbol": symbol,
+        "author_review_ready": all(gate["ready"] for gate in gates),
+        "gates": gates,
+        "metrics": item,
+    }
+
+
+def build_paper_evidence_review(db: Session, symbols: list[str] | None = None) -> dict:
+    performance = paper_performance_metrics(db, symbols=symbols, limit=500)
+    items = [_build_symbol_review(item) for item in performance.get("items") or []]
+    return {
+        "generated_at": datetime.utcnow().isoformat(),
+        "symbols": performance.get("symbols") or [item["symbol"] for item in items],
+        "items": items,
+    }
+
+
 def record_paper_evidence_snapshot(db: Session, trigger: str = "manual", symbols: list[str] | None = None) -> dict:
     snapshot = build_paper_evidence_snapshot(db)
     row = db.get(SystemState, STATE_KEY)
