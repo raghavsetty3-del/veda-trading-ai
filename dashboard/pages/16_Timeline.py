@@ -103,11 +103,11 @@ timeline = [
         "Status": "Hook built, URL needed",
     },
     {
-        "Phase": "Telegram/blog production ingestion",
+        "Phase": "Blog/X production ingestion",
         "Target": "2026-05-16 to 2026-05-17",
-        "Estimate": "0.5-1 day after credentials",
-        "Owner": "Shared",
-        "Status": "Code ready; waiting for Telegram/RSS details",
+        "Estimate": "Done",
+        "Owner": "System",
+        "Status": "Illango/JustNifty feeds configured; Telegram on hold",
     },
     {
         "Phase": "OpenAI extraction enrichment",

@@ -69,9 +69,9 @@ with right:
 **Pending**
 - At least 20 realized paper exits per reviewed symbol
 - Positive sample-ready profit factor
-- Telegram/blog scheduled ingestion
+- Blog/X scheduled ingestion health
 - External healthwatch webhook URL
-- Optional OpenAI enrichment key
+- Optional Telegram ingestion remains on hold
 """
     )
 

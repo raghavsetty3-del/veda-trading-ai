@@ -1,6 +1,6 @@
 # Veda Trading AI Project Status
 
-Last updated: 2026-05-16
+Last updated: 2026-05-17
 
 ## Completed
 
@@ -33,25 +33,26 @@ Last updated: 2026-05-16
 - The earlier BANKNIFTY baseline weak pocket was sell-side profit factor 1.626 with max drawdown 2024.03 points; tuned validation improved sell profit factor and reduced drawdown.
 - Effective paper scheduler configs: NIFTY uses R 0.75, fraction 0.6, trail 4, cooldown 5; BANKNIFTY uses R 1.25, fraction 0.6, trail 3, cooldown 5.
 - Forward paper evidence is not ready yet: NIFTY has 1 closed paper trade; BANKNIFTY has 0 closed paper trades.
+- Current deployed extraction backlog is clear: pending sources 0 and chart-backed pending extraction 0 after the latest controlled run. OpenAI visual enrichment may still retry individual chart details after rate-limit backoff clears.
 
 ## Pending
 
 - Wait for regular market sessions to collect at least 20 closed forward paper trades per symbol.
 - Confirm forward paper P&L remains positive for NIFTY and BANKNIFTY.
-- Finish processing the remaining blog/chart extraction backlog.
+- Keep scheduled Blogspot/WordPress, X, Dhan, and extraction workers running; process any new author sources as they arrive.
 - Keep collecting forward paper evidence under the per-symbol exit settings before any live review.
 - Keep validating chart-image extraction quality against the author's chart annotations.
-- Push any local commits that require laptop SSH passphrase entry.
+- Push any new local commits that require laptop SSH passphrase entry.
 
 ## On Hold
 
-- Telegram ingestion, because current Telegram content is expected to duplicate blog posts.
+- Telegram ingestion, because current Telegram content is expected to duplicate blog posts and we agreed to keep it aside for now.
 - External public sharing/webhook alerts, because external use is not needed for now.
 - Live trading or broker order placement, until readiness gates and manual review pass.
 
 ## Next Actions That Do Not Depend On Market Sessions
 
 - Keep reviewing per-symbol promotion readiness and latest background jobs in the System Evidence dashboard.
-- Continue chart extraction and author-mechanism enrichment in the background.
+- Continue chart extraction and author-mechanism enrichment for new Blogspot/WordPress and X sources in the background.
 - Requeue older chart-backed sources in controlled batches when they were archived before visual image-analysis tracking existed.
 - Convert stable chart/mechanism patterns into additional candidate rules only after enough repeated evidence is visible.

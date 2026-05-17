@@ -82,7 +82,7 @@ Date: 2026-05-16
 - Draft rule activation now checks automated scenario evidence and blocks incomplete activations.
 - Timeline and live-readiness gates are documented and visible in the dashboard.
 - Parallel workstreams are now visible in readiness and the Timeline dashboard so non-paper work can continue while forward paper evidence accumulates.
-- Integration setup helpers are present for Telegram, RSS feeds, and healthwatch webhook configuration without committing secrets.
+- Integration setup helpers are present for Telegram, RSS feeds, X, and healthwatch webhook configuration without committing secrets; Telegram is currently on hold by project decision.
 - Paper evidence review runbook is present for the eventual live-readiness review.
 - Historical candle readiness now distinguishes provider-backed candles from smoke/manual/demo data.
 
@@ -90,7 +90,7 @@ Date: 2026-05-16
 
 - Let provider-backed paper trades accumulate and reconcile until each reviewed instrument has at least 20 realized closed outcomes.
 - Review paper-trade exit outcomes before enabling any live execution.
-- Configure production blog RSS feeds and live Telegram listener credentials.
+- Keep production Blogspot/WordPress and X ingestion healthy; Telegram remains on hold unless it later provides unique content.
 - Add stronger user authentication than Basic Auth if the app will be shared beyond personal access.
 - Monitor weekly restore drill logs and audit events.
 - Configure an external webhook receiver for healthwatch alerts if desired.
