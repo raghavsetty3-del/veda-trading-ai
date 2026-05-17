@@ -219,6 +219,12 @@ class XIngestRequest(BaseModel):
     limit: int | None = None
 
 
+class XBackfillRequest(BaseModel):
+    usernames: list[str] | None = None
+    pages: int = 3
+    per_page: int = 100
+
+
 class XExportPost(BaseModel):
     post_id: str | int
     text: str

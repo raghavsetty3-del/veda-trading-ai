@@ -15,11 +15,13 @@ def ingest_blog_feed(db, feed_url: str, limit: int | None = None) -> dict:
     max_items = limit or settings.blog_ingest_limit
     created = 0
     existing = 0
+    created_source_ids = []
     entries = fetch_rss_entries(feed_url)[:max_items]
     for item in entries:
         row, was_created, psychology = archive_source_document(db, item)
         if was_created:
             created += 1
+            created_source_ids.append(row.id)
             audit(
                 db,
                 "source.ingested",
@@ -30,16 +32,24 @@ def ingest_blog_feed(db, feed_url: str, limit: int | None = None) -> dict:
             )
         else:
             existing += 1
-    return {"feed_url": feed_url, "seen": len(entries), "created": created, "existing": existing}
+    return {
+        "feed_url": feed_url,
+        "seen": len(entries),
+        "created": created,
+        "existing": existing,
+        "created_source_ids": created_source_ids,
+    }
 
 
 def _archive_blog_items(db, entries: list[dict], source_label: str) -> dict:
     created = 0
     existing = 0
+    created_source_ids = []
     for item in entries:
         row, was_created, psychology = archive_source_document(db, item)
         if was_created:
             created += 1
+            created_source_ids.append(row.id)
             audit(
                 db,
                 "source.ingested",
@@ -50,7 +60,7 @@ def _archive_blog_items(db, entries: list[dict], source_label: str) -> dict:
             )
         else:
             existing += 1
-    return {"seen": len(entries), "created": created, "existing": existing}
+    return {"seen": len(entries), "created": created, "existing": existing, "created_source_ids": created_source_ids}
 
 
 def backfill_wordpress_site(db, site: str, max_pages: int = 10, per_page: int = 100) -> dict:
@@ -131,6 +141,7 @@ def ingest_configured_blog_feeds(db) -> dict:
         "created": sum(item["created"] for item in results),
         "existing": sum(item["existing"] for item in results),
         "seen": sum(item["seen"] for item in results),
+        "created_source_ids": [source_id for item in results for source_id in item.get("created_source_ids", [])],
         "results": results,
         "errors": errors,
     }

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.db import Base, engine, get_db
 from app.models import AuditLog, AuthorPrinciple, ExtractedInsight, MarketCandle, PaperTrade, RuleMapping, SourceDocument, SystemState, ValidationCase
-from app.schemas import AuditEvent, BacktestRequest, BlogBackfillRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperReplayBacktestRequest, PaperReplayValidationRequest, PaperSchedulerRunRequest, PaperTradeReconcileRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramBotIngestRequest, TelegramExportIngestRequest, TelegramLiveIngestRequest, TelegramPublicIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate, XExportIngestRequest, XIngestRequest
+from app.schemas import AuditEvent, BacktestRequest, BlogBackfillRequest, CandleBacktestRequest, CandleReplayValidationRequest, MarketCandleBulkCreate, MarketCandleCreate, MarketProviderIngestRequest, MarketSnapshotRequest, PaperReplayBacktestRequest, PaperReplayValidationRequest, PaperSchedulerRunRequest, PaperTradeReconcileRequest, PaperTradeRequest, PaperTradeStatusUpdate, PaperTradeValidationRequest, PrincipleCreate, RuleActivationRequest, RuleEvaluationRequest, RuleMappingCreate, RuleSuggestionPromotionRequest, SetupEvaluationRequest, SourceDocumentCreate, TelegramBotIngestRequest, TelegramExportIngestRequest, TelegramLiveIngestRequest, TelegramPublicIngestRequest, TradeExportValidationRequest, ValidationCaseCreate, ValidationResultUpdate, XBackfillRequest, XExportIngestRequest, XIngestRequest
 from app.services.audit import audit
 from app.services.angelone_market_data import angelone_status
 from app.services.backtesting import evaluate_backtest, evaluate_candle_backtest
@@ -573,6 +573,17 @@ def ingest_x_status():
 def ingest_x_configured(payload: XIngestRequest | None = None, db: Session = Depends(get_db)):
     payload = payload or XIngestRequest()
     return ingest_configured_x_usernames(db, usernames=payload.usernames, limit=payload.limit)
+
+
+@app.post("/ingest/x/backfill")
+def ingest_x_backfill(payload: XBackfillRequest | None = None, db: Session = Depends(get_db)):
+    payload = payload or XBackfillRequest()
+    return ingest_configured_x_usernames(
+        db,
+        usernames=payload.usernames,
+        limit=payload.per_page,
+        pages=payload.pages,
+    )
 
 
 @app.post("/ingest/x/export")
